@@ -266,8 +266,8 @@ void InitRectangle(void)
 
 void GetCurrentPoint(void)
 {
-    CurrentPoint->x = GetCurrentX();
-    CurrentPoint->y = GetCurrentY();
+    CurrentPoint->x = GetMouseX();
+    CurrentPoint->y = GetMouseY();
 }
 
 void RefreshDisplay(void)
