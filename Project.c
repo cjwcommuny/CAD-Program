@@ -26,7 +26,7 @@ typedef enum {
 
 typedef enum {
     CURRENT_POINT_MSECONDS = 100
-}
+} mseconds;
 
 typedef enum {
     NO_TYPE,
@@ -35,12 +35,12 @@ typedef enum {
     RECTANGLE,
     ELLIPSE,
     LOCUS,
-} 2DDrawType;
+} TwoDDrawType;
 
 typedef enum {
-    DRAW;
-    OPERATE;
-} mode;
+    DRAW,
+    OPERATE,
+} ModeType;
 
 struct Point {
     double x;
@@ -48,7 +48,7 @@ struct Point {
     double z;
 };
 
-struct 2Dobj {
+struct TwoDobj {
     void (*draw)(void);
     void (*rotate)(void);
     void (*move)(void);
@@ -56,8 +56,8 @@ struct 2Dobj {
     int DegreePointFreedom;
 };
 
-struct 2DhasEdge {
-    struct 2Dobj *obj;
+struct TwoDhasEdge {
+    struct TwoDobj *obj;
     struct Point *pointarray[MAXPOINT];
     bool **RelationMatrix;
     int PointNum;
@@ -74,7 +74,7 @@ struct RegisterADT {
     void *ActiveOne;
 };
 
-const bool RectangleMatrix[][] = {
+const bool RectangleMatrix[4][4] = {
     {0, 1, 1, 1},
     {1, 0, 1, 1},
     {1, 1, 0, 1},
@@ -92,9 +92,9 @@ void MouseEventProcess(int x, int y, int button, int event);
 void TimerEventProcess(int timerID);
 
 void GetCurrentPoint(void);
-static void ChooseButton(void (*left1)(void), void (*left2)(void)/*, 
+static void ChooseButton(void (*left1)(void)/*, void (*left2)(void), 
                          void (*right1)(void), void (*right2)(void), 
-                         void (*middle1)(void), void (*middle2)(void)*/);
+                         void (*middle1)(void), void (*middle2)(void)*/, int button);
 static void ChooseMode(void (*draw)(void)/*, void (*operate)(void)*/);
 static void LeftMouseDownDraw(void);
 static void LeftMouseUpDraw(void);
@@ -103,9 +103,11 @@ void RefreshDisplay(void);
 void InitRegister(void);
 void Register(void *objPt, int type);
 //struct obj *FindActive(void)
-void Draw2DhasEdge(void);
+void DrawTwoDhasEdge(void);
 void DrawLineByPoint(struct Point *point1, struct Point *point2);
 void RefreshAndDraw(void);
+void InitRectangle(void);
+void DrawRectangle(double x, double y, double width, double height);
 
 void Main()
 {
@@ -126,7 +128,7 @@ void KeyboardEventProcess(int key,int event)
     switch (event) {
         case KEY_DOWN:
             break;
-        case KEY_DOWN:
+        case KEY_UP:
             break;
     }
 }
@@ -150,12 +152,12 @@ void MouseEventProcess(int x, int y, int button, int event)
 {
     switch (event) {
         case BUTTON_DOWN:
-            ChooseButton(LeftMouseDownDraw/*,,,,,*/);
+            ChooseButton(LeftMouseDownDraw/*,,,,,*/, button);
             break;
         case BUTTON_UP:
-            ChooseButton(LeftMouseUpDraw/*,,,,,*/);
+            ChooseButton(LeftMouseUpDraw/*,,,,,*/, button);
             break;
-        case MOUSE_MOVE:
+        case MOUSEMOVE:
             //ChooseButton();
             break;
     }
@@ -163,7 +165,7 @@ void MouseEventProcess(int x, int y, int button, int event)
 
 static void ChooseButton(void (*left1)(void)/*, void (*left2)(void), 
                          void (*right1)(void), void (*right2)(void), 
-                         void (*middle1)(void), void (*middle2)(void)*/)
+                         void (*middle1)(void), void (*middle2)(void)*/, int button)
 {
     switch (button) {
         case LEFT_BUTTON:
@@ -207,7 +209,7 @@ static void LeftMouseMoveDraw(void)
 {
     if (isDrawing) {
         RefreshAndDraw();
-        //ChooseDrawWhat(/*,,*/Draw2DhasEdge/*,,*/);
+        //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
 }
 
@@ -221,19 +223,19 @@ void ChooseDrawWhat(/*void (*text)(void),
         case NO_TYPE:
             break;
         case TEXT:
-            text();
+            //text();
             break;
         case LINE:
-            line();
+            //line();
             break;
         case RECTANGLE:
             rectangle();
             break;
         case ELLIPSE:
-            ellipse();
+            //ellipse();
             break;
         case LOCUS:
-            locus();
+            //locus();
             break;
     }
 }
@@ -241,20 +243,20 @@ void ChooseDrawWhat(/*void (*text)(void),
 void InitRectangle(void)
 {
     //struct obj *obj;
-    struct 2DhasEdge *rectangle = GetBlock(sizeof(struct 2DhasEdge));
+    struct TwoDhasEdge *rectangle = GetBlock(sizeof(struct TwoDhasEdge));
     int i;
 
     Register(rectangle, RECTANGLE);
 
-    rectangle->PointerNum = 4;
-    for (i = 0; i < rectangle->PointerNum; i++) {
+    rectangle->PointNum = 4;
+    for (i = 0; i < rectangle->PointNum; i++) {
         (rectangle->pointarray)[i] = GetBlock(sizeof(struct Point));
     }
     (rectangle->pointarray)[0]->x = CurrentPoint->x;
     (rectangle->pointarray)[0]->y = CurrentPoint->y;
     rectangle->RelationMatrix = RectangleMatrix;
     
-    rectangle->obj = GetBlock(sizeof(struct 2Dobj));
+    rectangle->obj = GetBlock(sizeof(struct TwoDobj));
     rectangle->obj->color = DEFAULT_COLOR;
     rectangle->obj->DegreePointFreedom = 2;
     //rectangle->obj->draw = 
@@ -278,7 +280,7 @@ void RefreshDisplay(void)
     StartFilledRegion(1);
     DrawRectangle(0, 0, GetWindowWidth(), GetWindowHeight()); //是否修改成整个屏幕的大小
     EndFilledRegion();
-    MovePen(CurrentPoint.x, CurrentPoint.y);
+    MovePen(CurrentPoint->x, CurrentPoint->y);
     SetEraseMode(FALSE);
 }
 
@@ -289,10 +291,10 @@ void RefreshAndDraw(void)
 
     RefreshDisplay();
 
-    temp = RegisterP->RegisterObj[i]
-    for (i = 0; temp, i++) {
+    temp = RegisterP->RegisterObj[i];
+    for (i = 0; temp; i++) {
         DrawWhat = temp->DrawType;
-        ChooseDrawWhat(/*,,*/Draw2DhasEdge/*,,*/);
+        ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
 }
 
@@ -336,10 +338,10 @@ void InitRegister(void)
     }
 }*/
 
-void Draw2DhasEdge(void)
+void DrawTwoDhasEdge(void)
 {
     int i, j;
-    struct 2DhasEdge *obj = RegisterP->ActiveOne;
+    struct TwoDhasEdge *obj = RegisterP->ActiveOne;
 
     for (i = 0; i < obj->PointNum; i++) {
         for (j = i; j < obj->PointNum; j++) {
@@ -352,4 +354,13 @@ void DrawLineByPoint(struct Point *point1, struct Point *point2)
 {
     MovePen(point1->x, point1->y);
     DrawLine((point2->x)-(point1->x), (point2->y)-(point1->y));
+}
+
+void DrawRectangle(double x, double y, double width, double height)
+{
+    MovePen(x, y);
+    DrawLine(width, 0);
+    DrawLine(0, height);
+    DrawLine(-width, 0);
+    DrawLine(0, -height);
 }
