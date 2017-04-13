@@ -75,10 +75,10 @@ struct RegisterADT {
 };
 
 const bool RectangleMatrix[4][4] = {
-    {0, 1, 1, 1},
-    {1, 0, 1, 1},
-    {1, 1, 0, 1},
-    {1, 1, 1, 0}
+    {0, 1, 1, 0},
+    {1, 0, 0, 1},
+    {1, 0, 0, 1},
+    {0, 1, 1, 0}
 };
 static int mode = DRAW; //Draw or Operate test
 static int DrawWhat = RECTANGLE; //DrawType test
@@ -113,7 +113,8 @@ void Main()
 {
     SetWindowTitle("CAD Program");
     InitGraphics();
-	
+	InitConsole();
+    CurrentPoint = GetBlock(sizeof(struct Point));
     //startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
     InitRegister();
 
@@ -137,21 +138,21 @@ void CharEventProcess(char c)
 {
 
 }
-
+/*
 void TimerEventProcess(int timerID)
 {
     switch (timerID) {
         case CURRENT_POINT_TIMER:
-            CurrentPoint = GetBlock(sizeof(struct Point));
             GetCurrentPoint();
             break;
     }
 }
-
+*/
 void MouseEventProcess(int x, int y, int button, int event)
 {
     CurrentPoint->x = ScaleXInches(x);
     CurrentPoint->y = ScaleXInches(y);
+    //printf("coodinate: %f, %f\n", CurrentPoint->x, CurrentPoint->y);
 
     switch (event) {
         case BUTTON_DOWN:
