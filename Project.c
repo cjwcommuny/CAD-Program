@@ -29,6 +29,7 @@ typedef enum {
 }
 
 typedef enum {
+    NO_TYPE,
     TEXT,
     LINE,
     RECTANGLE,
@@ -59,15 +60,16 @@ struct 2DhasEdge {
     struct 2Dobj *obj;
     struct Point *pointarray[MAXPOINT];
     bool **RelationMatrix;
+    int PointNum;
 };
 
-/*struct obj {
+struct obj {
     void *objPointer;
-    bool isActive;
-};*/
+    int DrawType;
+};
 
 struct RegisterADT {
-    void *RegisterObj[MAXOBJ];
+    struct obj *RegisterObj[MAXOBJ];
     int ObjNum;
     void *ActiveOne;
 };
@@ -78,8 +80,8 @@ const bool RectangleMatrix[][] = {
     {1, 1, 0, 1},
     {1, 1, 1, 0}
 };
-static int mode; //Draw or Operate
-static int DrawWhat; //DrawType
+static int mode = DRAW; //Draw or Operate test
+static int DrawWhat = RECTANGLE; //DrawType test
 static bool isDrawing = FALSE;
 static struct Point *CurrentPoint;
 static struct RegisterADT *RegisterP;
@@ -99,7 +101,11 @@ static void LeftMouseUpDraw(void);
 static void LeftMouseMoveDraw(void);
 void RefreshDisplay(void);
 void InitRegister(void);
-struct obj *FindActive(void)
+void Register(void *objPt, int type);
+//struct obj *FindActive(void)
+void Draw2DhasEdge(void);
+void DrawLineByPoint(struct Point *point1, struct Point *point2);
+void RefreshAndDraw(void);
 
 void Main()
 {
@@ -126,8 +132,9 @@ void KeyboardEventProcess(int key,int event)
 }
 
 void CharEventProcess(char c)
+{
 
-
+}
 
 void TimerEventProcess(int timerID)
 {
@@ -192,12 +199,15 @@ static void LeftMouseDownDraw(void)
 static void LeftMouseUpDraw(void)
 {
     isDrawing = FALSE;
+    RegisterP->ActiveOne = NULL;
+    DrawWhat = NO_TYPE;
 }
 
 static void LeftMouseMoveDraw(void)
 {
     if (isDrawing) {
-
+        RefreshAndDraw();
+        //ChooseDrawWhat(/*,,*/Draw2DhasEdge/*,,*/);
     }
 }
 
@@ -207,7 +217,9 @@ void ChooseDrawWhat(/*void (*text)(void),
                     void (*ellipse)(void), 
                     void (*locus)(void)*/)
 {
-    switch (DrawingWhat) {
+    switch (DrawWhat) {
+        case NO_TYPE:
+            break;
         case TEXT:
             text();
             break;
@@ -232,15 +244,16 @@ void InitRectangle(void)
     struct 2DhasEdge *rectangle = GetBlock(sizeof(struct 2DhasEdge));
     int i;
 
-    Register(rectangle);
+    Register(rectangle, RECTANGLE);
 
-    for (i = 0; i < 4; i++) {
+    rectangle->PointerNum = 4;
+    for (i = 0; i < rectangle->PointerNum; i++) {
         (rectangle->pointarray)[i] = GetBlock(sizeof(struct Point));
     }
     (rectangle->pointarray)[0]->x = CurrentPoint->x;
     (rectangle->pointarray)[0]->y = CurrentPoint->y;
     rectangle->RelationMatrix = RectangleMatrix;
-
+    
     rectangle->obj = GetBlock(sizeof(struct 2Dobj));
     rectangle->obj->color = DEFAULT_COLOR;
     rectangle->obj->DegreePointFreedom = 2;
@@ -269,6 +282,20 @@ void RefreshDisplay(void)
     SetEraseMode(FALSE);
 }
 
+void RefreshAndDraw(void)
+{
+    int i;
+    struct obj *temp;
+
+    RefreshDisplay();
+
+    temp = RegisterP->RegisterObj[i]
+    for (i = 0; temp, i++) {
+        DrawWhat = temp->DrawType;
+        ChooseDrawWhat(/*,,*/Draw2DhasEdge/*,,*/);
+    }
+}
+
 struct Point *CopyPoint(struct Point *point)
 {
     struct Point *DestinationPoint = GetBlock(sizeof(struct Point));
@@ -278,13 +305,14 @@ struct Point *CopyPoint(struct Point *point)
     return DestinationPoint;
 }
 
-void Register(void *objPt)
+void Register(void *objPt, int type)
 {
-    //struct obj *objP = GetBlock(sizeof(struct obj));
+    struct obj *objP = GetBlock(sizeof(struct obj));
 
-    //objP->objPointer = objPt;
-    //objP->isActive = TRUE;
-    (RegisterP->RegisterObj)[(RegisterP->ObjNum)++] = objPt;
+    objP->objPointer = objPt;
+    objP->DrawType = type;
+    (RegisterP->RegisterObj)[(RegisterP->ObjNum)++] = objP;
+    RegisterP->ActiveOne = objP;
 }
 
 void InitRegister(void)
@@ -298,7 +326,7 @@ void InitRegister(void)
     RegisterP->ObjNum = 0;
 }
 
-struct obj *FindActive(void)
+/*struct obj *FindActive(void)
 {
     int i;
     struct obj *result;
@@ -306,4 +334,22 @@ struct obj *FindActive(void)
     for (i = 0; result = (RegisterADT->RegisterObj)[i]; i++) { //not false
         if (result->isActive) return result;
     }
+}*/
+
+void Draw2DhasEdge(void)
+{
+    int i, j;
+    struct 2DhasEdge *obj = RegisterP->ActiveOne;
+
+    for (i = 0; i < obj->PointNum; i++) {
+        for (j = i; j < obj->PointNum; j++) {
+            if (obj->RelationMatrix[i][j]) DrawLineByPoint(obj->pointarray[i], obj->pointarray[j]);
+        }
+    }
+}
+
+void DrawLineByPoint(struct Point *point1, struct Point *point2)
+{
+    MovePen(point1->x, point1->y);
+    DrawLine((point2->x)-(point1->x), (point2->y)-(point1->y));
 }
