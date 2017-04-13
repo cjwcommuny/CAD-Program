@@ -114,7 +114,7 @@ void Main()
     SetWindowTitle("CAD Program");
     InitGraphics();
 	
-    startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
+    //startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
     InitRegister();
 
 	registerKeyboardEvent(KeyboardEventProcess);
@@ -150,6 +150,9 @@ void TimerEventProcess(int timerID)
 
 void MouseEventProcess(int x, int y, int button, int event)
 {
+    CurrentPoint->x = ScaleXInches(x);
+    CurrentPoint->y = ScaleXInches(y);
+
     switch (event) {
         case BUTTON_DOWN:
             ChooseButton(LeftMouseDownDraw/*,,,,,*/, button);
