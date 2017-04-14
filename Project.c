@@ -71,7 +71,7 @@ struct obj {
 struct RegisterADT {
     struct obj *RegisterObj[MAXOBJ];
     int ObjNum;
-    void *ActiveOne;
+    struct obj *ActiveOne;
 };
 
 const bool RectangleMatrix[4][4] = {
@@ -108,6 +108,7 @@ void DrawLineByPoint(struct Point *point1, struct Point *point2);
 void RefreshAndDraw(void);
 void InitRectangle(void);
 void DrawRectangle(double x, double y, double width, double height);
+void DrawRectangle2(void);
 
 void Main()
 {
@@ -298,7 +299,7 @@ void RefreshAndDraw(void)
     temp = RegisterP->RegisterObj[i];
     for (i = 0; temp; i++) {
         DrawWhat = temp->DrawType;
-        ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+        ChooseDrawWhat(/*,,*/DrawRectangle/*,,*/);
     }
 }
 
@@ -345,7 +346,7 @@ void InitRegister(void)
 void DrawTwoDhasEdge(void)
 {
     int i, j;
-    struct TwoDhasEdge *obj = RegisterP->ActiveOne;
+    struct TwoDhasEdge *obj = RegisterP->ActiveOne->objPointer;
 
     for (i = 0; i < obj->PointNum; i++) {
         for (j = i; j < obj->PointNum; j++) {
@@ -367,4 +368,17 @@ void DrawRectangle(double x, double y, double width, double height)
     DrawLine(0, height);
     DrawLine(-width, 0);
     DrawLine(0, -height);
+}
+
+void DrawRectangle2(void)
+{
+    struct TwoDhasEdge *temp = RegisterP->ActiveOne->objPointer;
+
+    temp->pointarray[2]->x = CurrentPoint->x;
+    temp->pointarray[2]->y = CurrentPoint->y;
+    temp->pointarray[1]->x = temp->pointarray[2]->x;
+    temp->pointarray[1]->y = temp->pointarray[0]->y;
+    temp->pointarray[3]->x = temp->pointarray[0]->x;
+    temp->pointarray[3]->y = temp->pointarray[2]->y;
+    DrawTwoDhasEdge();
 }
