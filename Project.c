@@ -25,7 +25,7 @@ typedef enum {
 } timerID;
 
 typedef enum {
-    CURRENT_POINT_MSECONDS = 100
+    CURRENT_POINT_MSECONDS = 5
 } mseconds;
 
 typedef enum {
@@ -59,8 +59,8 @@ struct TwoDobj {
 struct TwoDhasEdge {
     struct TwoDobj *obj;
     struct Point *pointarray[MAXPOINT];
-    bool **RelationMatrix;
     int PointNum;
+    bool (*RelationMatrix)[4]; //could be generalizied
 };
 
 struct obj {
@@ -71,14 +71,14 @@ struct obj {
 struct RegisterADT {
     struct obj *RegisterObj[MAXOBJ];
     int ObjNum;
-    struct obj *ActiveOne;
+    int ActiveOne;
 };
 
 const bool RectangleMatrix[4][4] = {
-    {0, 1, 1, 0},
-    {1, 0, 0, 1},
-    {1, 0, 0, 1},
-    {0, 1, 1, 0}
+    {0, 1, 0, 1},
+    {1, 0, 1, 0},
+    {0, 1, 0, 1},
+    {1, 0, 1, 0}
 };
 static int mode = DRAW; //Draw or Operate test
 static int DrawWhat = RECTANGLE; //DrawType test
@@ -109,6 +109,7 @@ void RefreshAndDraw(void);
 void InitRectangle(void);
 void DrawRectangle(double x, double y, double width, double height);
 void DrawRectangle2(void);
+void UpdateRectangle(void);
 
 void Main()
 {
@@ -152,7 +153,7 @@ void TimerEventProcess(int timerID)
 void MouseEventProcess(int x, int y, int button, int event)
 {
     CurrentPoint->x = ScaleXInches(x);
-    CurrentPoint->y = ScaleXInches(y);
+    CurrentPoint->y = GetWindowHeight() - ScaleXInches(y);
     //printf("coodinate: %f, %f\n", CurrentPoint->x, CurrentPoint->y);
 
     switch (event) {
@@ -163,7 +164,8 @@ void MouseEventProcess(int x, int y, int button, int event)
             ChooseButton(LeftMouseUpDraw/*,,,,,*/, button);
             break;
         case MOUSEMOVE:
-            ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
+            //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
+            ChooseMode(LeftMouseMoveDraw/*,*/);
             break;
     }
 }
@@ -172,6 +174,7 @@ static void ChooseButton(void (*left1)(void)/*, void (*left2)(void),
                          void (*right1)(void), void (*right2)(void), 
                          void (*middle1)(void), void (*middle2)(void)*/, int button)
 {
+    //printf("TEST:ChooseButton\n");
     switch (button) {
         case LEFT_BUTTON:
             ChooseMode(left1/*, left2*/);
@@ -189,6 +192,7 @@ static void ChooseMode(void (*draw)(void)/*, void (*operate)(void)*/)
 {
     switch (mode) {
         case DRAW:
+            //printf("TEST:mode:DRAW\n");
             draw();
             break;
         case OPERATE:
@@ -199,19 +203,23 @@ static void ChooseMode(void (*draw)(void)/*, void (*operate)(void)*/)
 
 static void LeftMouseDownDraw(void)
 {
+    //printf("TEST:LeftMouseDownDraw\n");
     isDrawing = TRUE;
     ChooseDrawWhat(/*,,*/InitRectangle/*,,*/);
+    //printf("TEST:LeftMouseDownDraw over\n");
 }
 
 static void LeftMouseUpDraw(void)
 {
+    //printf("TEST:LeftMouseUpDraw\n");
     isDrawing = FALSE;
-    RegisterP->ActiveOne = NULL;
-    DrawWhat = NO_TYPE;
+    RegisterP->ActiveOne = -1;
+    //DrawWhat = NO_TYPE;
 }
 
 static void LeftMouseMoveDraw(void)
 {
+    //printf("TEST:LeftMouseMoveDraw\n");
     if (isDrawing) {
         RefreshAndDraw();
         //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
@@ -224,6 +232,7 @@ void ChooseDrawWhat(/*void (*text)(void),
                     void (*ellipse)(void), 
                     void (*locus)(void)*/)
 {
+    //printf("TEST:ChooseDrawWhat\n");
     switch (DrawWhat) {
         case NO_TYPE:
             break;
@@ -234,6 +243,7 @@ void ChooseDrawWhat(/*void (*text)(void),
             //line();
             break;
         case RECTANGLE:
+            //printf("TEST:case:RECTANGLE\n");
             rectangle();
             break;
         case ELLIPSE:
@@ -250,7 +260,7 @@ void InitRectangle(void)
     //struct obj *obj;
     struct TwoDhasEdge *rectangle = GetBlock(sizeof(struct TwoDhasEdge));
     int i;
-
+    //printf("TEST:InitRectangle\n");
     Register(rectangle, RECTANGLE);
 
     rectangle->PointNum = 4;
@@ -260,6 +270,8 @@ void InitRectangle(void)
     (rectangle->pointarray)[0]->x = CurrentPoint->x;
     (rectangle->pointarray)[0]->y = CurrentPoint->y;
     rectangle->RelationMatrix = RectangleMatrix;
+    //printf("TEST: matrix0:%d\n", RectangleMatrix[0][0]);
+    //printf("TEST: matrix1:%d\n", **(rectangle->RelationMatrix));
     
     rectangle->obj = GetBlock(sizeof(struct TwoDobj));
     rectangle->obj->color = DEFAULT_COLOR;
@@ -267,6 +279,7 @@ void InitRectangle(void)
     //rectangle->obj->draw = 
     //rectangle->obj->rotate = 
     //rectangle->obj->move = 
+    //printf("TEST: rectangle 0: %f, %f\n", (rectangle->pointarray)[0]->x, (rectangle->pointarray)[0]->y);
 }
 
 void GetCurrentPoint(void)
@@ -291,15 +304,21 @@ void RefreshDisplay(void)
 
 void RefreshAndDraw(void)
 {
-    int i;
-    struct obj *temp;
-
+    int i , objnum = RegisterP->ObjNum, temp;
+    struct obj *position;
+    //printf("TEST:RefreshAndDraw\n");
     RefreshDisplay();
 
-    temp = RegisterP->RegisterObj[i];
-    for (i = 0; temp; i++) {
-        DrawWhat = temp->DrawType;
-        ChooseDrawWhat(/*,,*/DrawRectangle/*,,*/);
+    temp = RegisterP->ActiveOne;
+    for (i = 0; i < objnum; i++) {
+        position = RegisterP->RegisterObj[i];
+        DrawWhat = position->DrawType;
+        RegisterP->ActiveOne = i;
+        if (i == temp) {
+            ChooseDrawWhat(/*,,*/DrawRectangle2/*,,*/);
+        } else {
+            ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+        }
     }
 }
 
@@ -314,12 +333,15 @@ struct Point *CopyPoint(struct Point *point)
 
 void Register(void *objPt, int type)
 {
-    struct obj *objP = GetBlock(sizeof(struct obj));
-
+    struct obj *objP = GetBlock(sizeof(struct obj));//error prompt:too much object
+    printf("TEST:Register\n");
     objP->objPointer = objPt;
     objP->DrawType = type;
-    (RegisterP->RegisterObj)[(RegisterP->ObjNum)++] = objP;
-    RegisterP->ActiveOne = objP;
+    (RegisterP->RegisterObj)[RegisterP->ObjNum] = objP;
+    //printf("TEST: register num:%d\n", RegisterP->ObjNum);
+    //printf("TEST: DrawType: %d\n", (RegisterP->RegisterObj)[(RegisterP->ObjNum)-1]->DrawType);
+    RegisterP->ActiveOne = RegisterP->ObjNum;
+    RegisterP->ObjNum++;
 }
 
 void InitRegister(void)
@@ -345,11 +367,15 @@ void InitRegister(void)
 
 void DrawTwoDhasEdge(void)
 {
-    int i, j;
-    struct TwoDhasEdge *obj = RegisterP->ActiveOne->objPointer;
+    int i, j, pointnum;
+    struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
 
-    for (i = 0; i < obj->PointNum; i++) {
-        for (j = i; j < obj->PointNum; j++) {
+    pointnum = obj->PointNum;
+    //printf("TEST:%d\n", pointnum);
+    for (i = 0; i < pointnum; i++) {
+        for (j = i; j < pointnum; j++) {
+            //printf("TEST:here\n");
+            //printf("TEST:matrix: %d\n", obj->RelationMatrix[i][j]);
             if (obj->RelationMatrix[i][j]) DrawLineByPoint(obj->pointarray[i], obj->pointarray[j]);
         }
     }
@@ -357,6 +383,7 @@ void DrawTwoDhasEdge(void)
 
 void DrawLineByPoint(struct Point *point1, struct Point *point2)
 {
+    //printf("TEST:DrawLineByPoint\n");
     MovePen(point1->x, point1->y);
     DrawLine((point2->x)-(point1->x), (point2->y)-(point1->y));
 }
@@ -372,7 +399,17 @@ void DrawRectangle(double x, double y, double width, double height)
 
 void DrawRectangle2(void)
 {
-    struct TwoDhasEdge *temp = RegisterP->ActiveOne->objPointer;
+    UpdateRectangle();
+    DrawTwoDhasEdge();
+    //printf("TEST:\n");
+    //TEST:getchar();
+    //printf("Rectangle: 0: %f, %f, 1: %f, %f, 2: %f, %f, 3: %f, %f\n", temp->pointarray[0]->x, temp->pointarray[0]->y, temp->pointarray[1]->x, temp->pointarray[1]->y, 
+    //temp->pointarray[2]->x, temp->pointarray[2]->y, temp->pointarray[3]->x, temp->pointarray[3]->y);
+}
+
+void UpdateRectangle(void)
+{
+    struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
 
     temp->pointarray[2]->x = CurrentPoint->x;
     temp->pointarray[2]->y = CurrentPoint->y;
@@ -380,5 +417,4 @@ void DrawRectangle2(void)
     temp->pointarray[1]->y = temp->pointarray[0]->y;
     temp->pointarray[3]->x = temp->pointarray[0]->x;
     temp->pointarray[3]->y = temp->pointarray[2]->y;
-    DrawTwoDhasEdge();
 }
