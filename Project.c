@@ -89,7 +89,7 @@ static struct RegisterADT *RegisterP;
 void KeyboardEventProcess(int key,int event);
 void CharEventProcess(char c);
 void MouseEventProcess(int x, int y, int button, int event);
-void TimerEventProcess(int timerID);
+//void TimerEventProcess(int timerID);
 
 void GetCurrentPoint(void);
 static void ChooseButton(void (*left1)(void)/*, void (*left2)(void), 
@@ -121,7 +121,7 @@ void Main()
 	registerKeyboardEvent(KeyboardEventProcess);
 	registerCharEvent(CharEventProcess);
 	registerMouseEvent(MouseEventProcess);
-	registerTimerEvent(TimerEventProcess);
+	//registerTimerEvent(TimerEventProcess);
 }
 
 void KeyboardEventProcess(int key,int event)
@@ -162,7 +162,7 @@ void MouseEventProcess(int x, int y, int button, int event)
             ChooseButton(LeftMouseUpDraw/*,,,,,*/, button);
             break;
         case MOUSEMOVE:
-            //ChooseButton();
+            ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
             break;
     }
 }
