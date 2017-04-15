@@ -315,6 +315,7 @@ void RefreshAndDraw(void)
         DrawWhat = position->DrawType;
         RegisterP->ActiveOne = i;
         if (i == temp) {
+            //printf("TEST: activeposition:%d\n", i);
             ChooseDrawWhat(/*,,*/DrawRectangle2/*,,*/);
         } else {
             ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
@@ -334,7 +335,7 @@ struct Point *CopyPoint(struct Point *point)
 void Register(void *objPt, int type)
 {
     struct obj *objP = GetBlock(sizeof(struct obj));//error prompt:too much object
-    printf("TEST:Register\n");
+    //printf("TEST:Register\n");
     objP->objPointer = objPt;
     objP->DrawType = type;
     (RegisterP->RegisterObj)[RegisterP->ObjNum] = objP;
@@ -368,9 +369,9 @@ void InitRegister(void)
 void DrawTwoDhasEdge(void)
 {
     int i, j, pointnum;
-    struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
+    struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
 
-    pointnum = obj->PointNum;
+    pointnum = obj->PointNum; //估计是这里obj没有对应进数组导致时而内存非法访问
     //printf("TEST:%d\n", pointnum);
     for (i = 0; i < pointnum; i++) {
         for (j = i; j < pointnum; j++) {
@@ -399,6 +400,8 @@ void DrawRectangle(double x, double y, double width, double height)
 
 void DrawRectangle2(void)
 {
+    struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    //printf("TEST: pointnum:%d\n", ((struct TwoDhasEdge *)((RegisterP->RegisterObj[RegisterP->ActiveOne])->objPointer))->PointNum);
     UpdateRectangle();
     DrawTwoDhasEdge();
     //printf("TEST:\n");
@@ -410,7 +413,7 @@ void DrawRectangle2(void)
 void UpdateRectangle(void)
 {
     struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
-
+    //printf("TEST: pointnum: %d\n", temp->PointNum);
     temp->pointarray[2]->x = CurrentPoint->x;
     temp->pointarray[2]->y = CurrentPoint->y;
     temp->pointarray[1]->x = temp->pointarray[2]->x;
