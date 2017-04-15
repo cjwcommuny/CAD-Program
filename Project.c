@@ -87,7 +87,7 @@ static int mode;
 static int DrawWhat; 
 static bool isDrawing = FALSE;
 static bool isOperating = FALSE;
-static struct Point *CurrentPoint;
+static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
 
 void KeyboardEventProcess(int key,int event);
@@ -105,6 +105,7 @@ static void LeftMouseUpDraw(void);
 static void LeftMouseMoveDraw(void);
 static void LeftMouseDownOperate(void);
 static void LeftMouseUpOperate(void);
+static void LeftMouseMoveOperate(void);
 void RefreshDisplay(void);
 void InitRegister(void);
 void Register(void *objPt, int type);
@@ -123,6 +124,7 @@ bool CompareArray(int *array1, int *array2, int length);
 void SetMode(void);
 void SetFunction(void);
 void PlaceHolder(void);
+void MoveObj(struct obj *Obj, double dx, double dy);
 
 void Main()
 {
@@ -130,6 +132,9 @@ void Main()
     InitGraphics();
 	//InitConsole();
     CurrentPoint = GetBlock(sizeof(struct Point));
+    PreviousPoint = GetBlock(sizeof(struct Point));
+    PreviousPoint->x = 0;
+    PreviousPoint->y = 0;
     //startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
     InitRegister();
 
@@ -174,6 +179,8 @@ void TimerEventProcess(int timerID)
 */
 void MouseEventProcess(int x, int y, int button, int event)
 {
+    PreviousPoint->x = CurrentPoint->x;
+    PreviousPoint->y = CurrentPoint->y;
     CurrentPoint->x = ScaleXInches(x);
     CurrentPoint->y = GetWindowHeight() - ScaleXInches(y);
     //printf("coodinate: %f, %f\n", CurrentPoint->x, CurrentPoint->y);
@@ -187,7 +194,7 @@ void MouseEventProcess(int x, int y, int button, int event)
             break;
         case MOUSEMOVE:
             //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
-            ChooseMode(LeftMouseMoveDraw, PlaceHolder);
+            ChooseMode(LeftMouseMoveDraw, LeftMouseMoveOperate);
             break;
     }
 }
@@ -253,7 +260,7 @@ static void LeftMouseDownOperate(void)
 {
     int i/*, j = 0*/;
     int objnum = RegisterP->ObjNum;
-    bool flag = 0;
+    bool SelectFlag = 0;
     //printf("objnum:%d\n", objnum);
     //int SelcectArray[MAXOBJ];
     //printf("TEST:LeftMouseDownOperate\n");
@@ -267,14 +274,14 @@ static void LeftMouseDownOperate(void)
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
             else RegisterP->RegisterObj[i]->color = SELECT_COLOR;
             ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
-            flag = 1;
+            SelectFlag = 1;
             //printf("TEST:here\n");
             break;
             //j++;
         }
     }
     //printf("TEST:here\n");
-    if (!flag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
+    if (!SelectFlag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
         //printf("TEST:here\n");
         for (i = 0; i < objnum; i++) {
             RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
@@ -285,7 +292,51 @@ static void LeftMouseDownOperate(void)
 
 static void LeftMouseUpOperate(void)
 {
+    isOperating = FALSE;
+}
 
+static void LeftMouseMoveOperate(void)
+{
+    int i;
+    double x0 = PreviousPoint->x;
+    double y0 = PreviousPoint->y;
+    double x1 = CurrentPoint->x;
+    double y1 = CurrentPoint->y;
+
+    if (isOperating) {
+        for (i = 0; i < RegisterP->ObjNum; i++) {
+            if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
+        }
+    }
+}
+
+void MoveObj(struct obj *Obj, double dx, double dy)
+{
+    int i;
+    //printf("TEST:dx, dy = %f, %f", dx, dy);
+    switch (Obj->DrawType) {
+        case TEXT:
+            break;
+        case LINE:
+            break;
+        case RECTANGLE:
+            /*for (i = 0; i <4; i++) {
+                printf("x0, y0 = %f, %f\n", ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x, 
+                                            ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y);
+            }*/
+            for (i = 0; i < ((struct TwoDhasEdge *) Obj->objPointer)->PointNum; i++) {
+                ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x += dx;
+                ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y += dy;
+            }
+            /*for (i = 0; i <4; i++) {
+                printf("x1, y1 = %f, %f\n", ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x, 
+                                            ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y);
+            }*/
+            break;
+        case ELLIPSE:
+            break;
+    }
+    RefreshAndDraw2();
 }
 
 void ChooseDrawWhat(/*void (*text)(void), 
@@ -345,11 +396,11 @@ void InitRectangle(void)
     //printf("TEST: rectangle 0: %f, %f\n", (rectangle->pointarray)[0]->x, (rectangle->pointarray)[0]->y);
 }
 
-void GetCurrentPoint(void)
+/*void GetCurrentPoint(void)
 {
     CurrentPoint->x = GetMouseX();
     CurrentPoint->y = GetMouseY();
-}
+}*/
 
 void RefreshDisplay(void)
 {
