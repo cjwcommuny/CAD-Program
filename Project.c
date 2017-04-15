@@ -112,6 +112,7 @@ void Register(void *objPt, int type);
 void DrawTwoDhasEdge(void);
 void DrawLineByPoint(struct Point *point1, struct Point *point2);
 void RefreshAndDraw(void);
+void RefreshAndDraw2(void);
 void InitRectangle(void);
 void DrawRectangle(double x, double y, double width, double height);
 void DrawRectangle2(void);
@@ -252,21 +253,32 @@ static void LeftMouseDownOperate(void)
 {
     int i/*, j = 0*/;
     int objnum = RegisterP->ObjNum;
+    bool flag = 0;
+    //printf("objnum:%d\n", objnum);
     //int SelcectArray[MAXOBJ];
-    printf("TEST:LeftMouseDownOperate\n");
+    //printf("TEST:LeftMouseDownOperate\n");
     isOperating = TRUE;
     for (i = 0; i < objnum; i++) {
         if (CheckMouse(RegisterP->RegisterObj[i])) {
-            //printf("TEST:here\n");
+            printf("TEST:here\n");
             //SelcectArray[j] = i;
             DrawWhat = RegisterP->RegisterObj[i]->DrawType;
             RegisterP->RegisterObj[i]->color = SELECT_COLOR;
             RegisterP->ActiveOne = i;
             ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+            flag = 1;
             //printf("TEST:here\n");
             break;
             //j++;
         }
+    }
+    //printf("TEST:here\n");
+    if (!flag /*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
+        //printf("TEST:here\n");
+        for (i = 0; i < objnum; i++) {
+            RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+        }
+        RefreshAndDraw2();
     }
 }
 
@@ -373,6 +385,22 @@ void RefreshAndDraw(void)
     }
 }
 
+void RefreshAndDraw2(void)
+{
+    int i , objnum = RegisterP->ObjNum, temp;
+    struct obj *position;
+    printf("TEST:RefreshAndDraw\n");
+    RefreshDisplay();
+
+    temp = RegisterP->ActiveOne;
+    for (i = 0; i < objnum; i++) {
+        position = RegisterP->RegisterObj[i];
+        DrawWhat = position->DrawType;
+        RegisterP->ActiveOne = i;
+        ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+    }
+}
+
 struct Point *CopyPoint(struct Point *point)
 {
     struct Point *DestinationPoint = GetBlock(sizeof(struct Point));
@@ -421,9 +449,9 @@ void DrawTwoDhasEdge(void)
 {
     int i, j, pointnum;
     struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
-    string PenColor;
+    //string PenColor;
     
-    PenColor = GetPenColor();
+    //PenColor = GetPenColor();
     SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
     obj->CenterPoint->x = 0;
     obj->CenterPoint->y = 0;
@@ -441,7 +469,7 @@ void DrawTwoDhasEdge(void)
     obj->CenterPoint->x /= obj->PointNum;
     obj->CenterPoint->y /= obj->PointNum;
     //printf("TEST:center point:%f, %f\n", obj->CenterPoint->x, obj->CenterPoint->y);
-    SetPenColor(PenColor);
+    //SetPenColor(PenColor);
 }
 
 void DrawLineByPoint(struct Point *point1, struct Point *point2)
@@ -486,7 +514,7 @@ void UpdateRectangle(void)
 
 bool CheckMouse(struct obj *Obj)
 {
-    printf("TEST:CheckMouse\n");
+    //printf("TEST:CheckMouse\n");
     switch (Obj->DrawType) {
         case TEXT:
             break;
@@ -509,20 +537,24 @@ bool CheckConvexPolygon(struct obj *Obj)
     struct TwoDhasEdge *polygon = Obj->objPointer;
     double cx = polygon->CenterPoint->x;
     double cy = polygon->CenterPoint->y;
-    bool isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
-    bool isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    //printf("TEST:CheckConvexPolygon\n");
+    int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
+    int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    printf("TEST:CheckConvexPolygon\n");
     for (i = 0; i < polygon->PointNum; i++) {
         //printf("TEST:loop-\n");
         for (j = i; j < polygon->PointNum; j++) {
             //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
                 //printf("TEST:loop1:%d, %d\n", i, j);
-                if ((x - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y -polygon->pointarray[i]->y)
+                if (polygon->pointarray[i]->x == polygon->pointarray[j]->x && y - polygon->pointarray[i]->y > 0) {
+                        isRegion[i] = 1;
+                } else if (polygon->pointarray[j]->y == polygon->pointarray[i]->y && x - polygon->pointarray[i]->x > 0) {
+                        isRegion[i] = 1;
+                } else if ((x - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y - polygon->pointarray[i]->y)
                      < 
-                    (y - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x -polygon->pointarray[i]->x)) {
-                        isRegion[i] = TRUE;
-                        //printf("TEST:loop2:%d, %d\n", i, j);//只显示到此
+                    (y - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x - polygon->pointarray[i]->x)) {
+                        isRegion[i] = 1;
+                        //printf("TEST:loop2:%d, %d\n", i, j);
                     }
             }
         }
@@ -534,17 +566,31 @@ bool CheckConvexPolygon(struct obj *Obj)
             //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
                 //printf("TEST:loop1:%d, %d\n", i, j);
-                if (( cx- polygon->pointarray[i]->x)*(polygon->pointarray[j]->y -polygon->pointarray[i]->y)
+                if (polygon->pointarray[i]->x == polygon->pointarray[j]->x && cy - polygon->pointarray[i]->y > 0) {
+                        isRegionCP[i] = 1;
+                } else if (polygon->pointarray[j]->y == polygon->pointarray[i]->y && cx - polygon->pointarray[i]->x > 0) {
+                        isRegionCP[i] = 1;
+                } else if ((cx - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y - polygon->pointarray[i]->y)
                      < 
-                    (cy - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x -polygon->pointarray[i]->x)) {
-                        isRegionCP[i] = TRUE;
+                    (cy - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x - polygon->pointarray[i]->x)) {
+                        isRegionCP[i] = 1;
                         //printf("TEST:loop2:%d, %d\n", i, j);
                     }
             }
         }
     }
-    if (CompareArray(isRegion, isRegionCP, sizeof(isRegion)/sizeof(isRegion[0]))) return TRUE;
-    else return FALSE;
+    /*printf("isRegion:");
+    for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
+        printf("%d ", isRegion[i]);
+        printf("\n");
+    }
+    printf("isRegionCP:");
+    for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
+        printf("%d ", isRegionCP[i]);
+        printf("\n");
+    }
+    //printf("TEST:here\n");*/
+    return CompareArray(isRegion, isRegionCP, sizeof(isRegion)/sizeof(isRegion[0]));
 }
 
 bool CompareArray(int *array1, int *array2, int length)
