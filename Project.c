@@ -48,16 +48,16 @@ struct Point {
     double z;
 };
 
-struct TwoDobj {
-    void (*draw)(void);
-    void (*rotate)(void);
-    void (*move)(void);
+/*struct TwoDobj {
+    //void (*draw)(void);
+    //void (*rotate)(void);
+    //void (*move)(void);
     string color;
     int DegreePointFreedom;
-};
+};*/
 
 struct TwoDhasEdge {
-    struct TwoDobj *obj;
+    //struct TwoDobj *obj;
     struct Point *pointarray[MAXPOINT];
     struct Point *CenterPoint;
     int PointNum;
@@ -67,6 +67,8 @@ struct TwoDhasEdge {
 struct obj {
     void *objPointer;
     int DrawType;
+    string color;
+    int DegreePointFreedom;
 };
 
 struct RegisterADT {
@@ -84,6 +86,7 @@ const bool RectangleMatrix[4][4] = {
 static int mode; 
 static int DrawWhat; 
 static bool isDrawing = FALSE;
+static bool isOperating = FALSE;
 static struct Point *CurrentPoint;
 static struct RegisterADT *RegisterP;
 
@@ -93,13 +96,15 @@ void MouseEventProcess(int x, int y, int button, int event);
 //void TimerEventProcess(int timerID);
 
 void GetCurrentPoint(void);
-static void ChooseButton(void (*left1)(void)/*, void (*left2)(void), 
+static void ChooseButton(void (*left1)(void), void (*left2)(void)/*, 
                          void (*right1)(void), void (*right2)(void), 
                          void (*middle1)(void), void (*middle2)(void)*/, int button);
-static void ChooseMode(void (*draw)(void)/*, void (*operate)(void)*/);
+static void ChooseMode(void (*draw)(void), void (*operate)(void));
 static void LeftMouseDownDraw(void);
 static void LeftMouseUpDraw(void);
 static void LeftMouseMoveDraw(void);
+static void LeftMouseDownOperate(void);
+static void LeftMouseUpOperate(void);
 void RefreshDisplay(void);
 void InitRegister(void);
 void Register(void *objPt, int type);
@@ -116,6 +121,7 @@ bool CheckConvexPolygon(struct obj *Obj);
 bool CompareArray(int *array1, int *array2, int length);
 void SetMode(void);
 void SetFunction(void);
+void PlaceHolder(void);
 
 void Main()
 {
@@ -173,26 +179,26 @@ void MouseEventProcess(int x, int y, int button, int event)
 
     switch (event) {
         case BUTTON_DOWN:
-            ChooseButton(LeftMouseDownDraw/*,,,,,*/, button);
+            ChooseButton(LeftMouseDownDraw, LeftMouseDownOperate/*,,,,*/, button);
             break;
         case BUTTON_UP:
-            ChooseButton(LeftMouseUpDraw/*,,,,,*/, button);
+            ChooseButton(LeftMouseUpDraw, LeftMouseUpOperate/*,,,,*/, button);
             break;
         case MOUSEMOVE:
             //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
-            ChooseMode(LeftMouseMoveDraw/*,*/);
+            ChooseMode(LeftMouseMoveDraw, PlaceHolder);
             break;
     }
 }
 
-static void ChooseButton(void (*left1)(void)/*, void (*left2)(void), 
+static void ChooseButton(void (*left1)(void), void (*left2)(void)/*, 
                          void (*right1)(void), void (*right2)(void), 
                          void (*middle1)(void), void (*middle2)(void)*/, int button)
 {
     //printf("TEST:ChooseButton\n");
     switch (button) {
         case LEFT_BUTTON:
-            ChooseMode(left1/*, left2*/);
+            ChooseMode(left1, left2);
             break;
         case RIGHT_BUTTON:
             //ChooseMode(right1, right2);
@@ -203,7 +209,7 @@ static void ChooseButton(void (*left1)(void)/*, void (*left2)(void),
     }
 }
 
-static void ChooseMode(void (*draw)(void)/*, void (*operate)(void)*/)
+static void ChooseMode(void (*draw)(void), void (*operate)(void))
 {
     switch (mode) {
         case DRAW:
@@ -211,7 +217,7 @@ static void ChooseMode(void (*draw)(void)/*, void (*operate)(void)*/)
             draw();
             break;
         case OPERATE:
-            //operate();
+            operate();
             break;
     }
 }
@@ -236,9 +242,31 @@ static void LeftMouseMoveDraw(void)
 {
     //printf("TEST:LeftMouseMoveDraw\n");
     if (isDrawing) {
+        //SetPenColor();
         RefreshAndDraw();
         //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
+}
+
+static void LeftMouseDownOperate(void)
+{
+    int i;
+    int objnum = RegisterP->ObjNum;
+
+    isOperating = TRUE;
+    for (i = 0; i < objnum; i++) {
+        if (CheckMouse(RegisterP->RegisterObj[i])) {
+            DrawWhat = RegisterP->RegisterObj[i]->DrawType;
+            RegisterP->RegisterObj[i]->color = SELECT_COLOR;
+            ChooseDrawWhat(/*,,*/DrawRectangle2/*,,*/);
+        }
+    }
+    //no operate.
+}
+
+static void LeftMouseUpOperate(void)
+{
+
 }
 
 void ChooseDrawWhat(/*void (*text)(void), 
@@ -289,9 +317,9 @@ void InitRectangle(void)
     //printf("TEST: matrix0:%d\n", RectangleMatrix[0][0]);
     //printf("TEST: matrix1:%d\n", **(rectangle->RelationMatrix));
     
-    rectangle->obj = GetBlock(sizeof(struct TwoDobj));
-    rectangle->obj->color = DEFAULT_COLOR;
-    rectangle->obj->DegreePointFreedom = 2;
+    //rectangle->obj = GetBlock(sizeof(struct TwoDobj));
+    //rectangle->obj->color = DEFAULT_COLOR;
+    //rectangle->obj->DegreePointFreedom = 2;
     //rectangle->obj->draw = 
     //rectangle->obj->rotate = 
     //rectangle->obj->move = 
@@ -354,6 +382,7 @@ void Register(void *objPt, int type)
     //printf("TEST:Register\n");
     objP->objPointer = objPt;
     objP->DrawType = type;
+    objP->color = DEFAULT_COLOR;
     (RegisterP->RegisterObj)[RegisterP->ObjNum] = objP;
     //printf("TEST: register num:%d\n", RegisterP->ObjNum);
     //printf("TEST: DrawType: %d\n", (RegisterP->RegisterObj)[(RegisterP->ObjNum)-1]->DrawType);
@@ -389,7 +418,7 @@ void DrawTwoDhasEdge(void)
     string PenColor;
     
     PenColor = GetPenColor();
-    SetPenColor(obj->obj->color);
+    SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
     obj->CenterPoint->x = 0;
     obj->CenterPoint->y = 0;
     pointnum = obj->PointNum; //估计是这里obj没有对应进数组导致时而内存非法访问
@@ -405,6 +434,7 @@ void DrawTwoDhasEdge(void)
     }
     obj->CenterPoint->x /= obj->PointNum;
     obj->CenterPoint->y /= obj->PointNum;
+    SetPenColor(PenColor);
 }
 
 void DrawLineByPoint(struct Point *point1, struct Point *point2)
@@ -534,7 +564,7 @@ void SetMode(void)
             break;
         case 3:
             mode = OPERATE;
-            SetFunction();
+            //SetFunction();
             break;
     }
     //how to close the console?
@@ -564,7 +594,24 @@ void SetFunction(void)
                     break;
             }
             break;
-        case OPERATE:
-            break;
+        /*case OPERATE:
+
+            printf("What operation do you want?\n");
+            printf("1:Move\n2:Rotate\n3:Change size\n");
+            scanf("%d", &input);
+            switch (input) {
+                case 1:
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+            }
+            break;*/
     }
+}
+
+void PlaceHolder(void)
+{
+    //no operate
 }
