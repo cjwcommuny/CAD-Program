@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <math.h>
 
 #include <windows.h>
 #include <olectl.h>
@@ -19,6 +20,9 @@
 #define MAXPOINT 10
 #define DEFAULT_COLOR "Black"
 #define SELECT_COLOR "Red"
+#define POINT_COLOR "Magenta"
+#define DL 0.05
+#define POINT_R 0.05
 
 typedef enum {
     CURRENT_POINT_TIMER = 1
@@ -125,6 +129,11 @@ void SetMode(void);
 void SetFunction(void);
 void PlaceHolder(void);
 void MoveObj(struct obj *Obj, double dx, double dy);
+CreateRotatePoint(struct obj *Obj);
+void CreateRotatePointForRectangle(struct obj *Obj);
+void DrawDottedLine(struct Point *point1, struct Point *point2);
+void DrawPoint(double x, double y);
+void DrawCenteredCircle(double x, double y, double r);
 
 void Main()
 {
@@ -275,6 +284,7 @@ static void LeftMouseDownOperate(void)
             else RegisterP->RegisterObj[i]->color = SELECT_COLOR;
             ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
             SelectFlag = 1;
+            CreateRotatePoint(RegisterP->RegisterObj[i]);
             //printf("TEST:here\n");
             break;
             //j++;
@@ -728,4 +738,76 @@ void SetFunction(void)
 void PlaceHolder(void)
 {
     //no operate
+}
+
+CreateRotatePoint(struct obj *Obj)
+{
+    switch (Obj->DrawType) {
+        case LINE:
+            break;
+        case RECTANGLE:
+            CreateRotatePointForRectangle(Obj);
+            break;
+        case ELLIPSE:
+            break;
+    }
+}
+
+void CreateRotatePointForRectangle(struct obj *Obj)
+{
+    struct TwoDhasEdge *temp = Obj->objPointer;
+    struct Point *MiddlePoint = GetBlock(sizeof(struct Point));
+    struct Point *RotatePoint = GetBlock(sizeof(struct Point));
+    string PenColor;
+    double len;
+    //printf("TEST:here\n");
+    //printf("TEST:Obj:\n");
+    MiddlePoint->x = (temp->pointarray[2]->x + temp->pointarray[3]->x)/2;
+    MiddlePoint->y = (temp->pointarray[2]->y + temp->pointarray[3]->y)/2;
+    //printf("TEST:here\n");
+    //len = sqrt(pow(temp->CenterPoint->x - MiddlePoint->x, 2) + pow(temp->CenterPoint->y - MiddlePoint->y, 2));
+    RotatePoint->x = 1.5*(MiddlePoint->x - temp->CenterPoint->x) + temp->CenterPoint->x;
+    RotatePoint->y = 1.5*(MiddlePoint->y - temp->CenterPoint->y) + temp->CenterPoint->y;
+    //printf("TEST:here\n");
+    DrawDottedLine(temp->CenterPoint, RotatePoint);
+    //printf("TEST:here\n");
+    PenColor = GetPenColor();
+    SetPenColor(POINT_COLOR);
+    DrawPoint(GetCurrentX(), GetCurrentY());
+    SetPenColor(PenColor);
+}
+
+void DrawDottedLine(struct Point *point1, struct Point *point2)
+{
+    double len = sqrt(pow(point2->x - point1->x, 2) + pow(point2->y - point1->y, 2));
+    //printf("TEST:X: %f, Y %f\n", point2->x - point1->x, point2->y - point1->y);
+    double length = 0;
+    double cos0 = (point2->x - point1->x)/len;
+    double sin0 = (point2->y - point1->y)/len;
+    bool flag = FALSE;
+    bool EraseMode = GetEraseMode();
+    //printf("here\n");
+    MovePen(point1->x, point1->y);
+    //printf("here\n");
+    //printf("TEST: %f\n", len);
+    while (length <= len) {
+        //printf("here\n");
+        DrawLine(DL*cos0, DL*sin0);
+        flag = !flag;
+        SetEraseMode(flag);
+        length += DL;
+    }
+    SetEraseMode(EraseMode);
+    //printf("here\n");
+}
+
+void DrawPoint(double x, double y)
+{
+    DrawCenteredCircle(x, y, POINT_R);
+}
+
+void DrawCenteredCircle(double x, double y, double r)
+{
+    MovePen(x + r, y);
+    DrawArc(r, 0.0, 360.0);
 }
