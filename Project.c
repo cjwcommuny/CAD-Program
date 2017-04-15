@@ -250,18 +250,24 @@ static void LeftMouseMoveDraw(void)
 
 static void LeftMouseDownOperate(void)
 {
-    int i;
+    int i/*, j = 0*/;
     int objnum = RegisterP->ObjNum;
-
+    //int SelcectArray[MAXOBJ];
+    printf("TEST:LeftMouseDownOperate\n");
     isOperating = TRUE;
     for (i = 0; i < objnum; i++) {
         if (CheckMouse(RegisterP->RegisterObj[i])) {
+            //printf("TEST:here\n");
+            //SelcectArray[j] = i;
             DrawWhat = RegisterP->RegisterObj[i]->DrawType;
             RegisterP->RegisterObj[i]->color = SELECT_COLOR;
-            ChooseDrawWhat(/*,,*/DrawRectangle2/*,,*/);
+            RegisterP->ActiveOne = i;
+            ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+            //printf("TEST:here\n");
+            break;
+            //j++;
         }
     }
-    //no operate.
 }
 
 static void LeftMouseUpOperate(void)
@@ -421,7 +427,7 @@ void DrawTwoDhasEdge(void)
     SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
     obj->CenterPoint->x = 0;
     obj->CenterPoint->y = 0;
-    pointnum = obj->PointNum; //估计是这里obj没有对应进数组导致时而内存非法访问
+    pointnum = obj->PointNum; 
     //printf("TEST:%d\n", pointnum);
     for (i = 0; i < pointnum; i++) {
          obj->CenterPoint->x += obj->pointarray[i]->x;
@@ -434,6 +440,7 @@ void DrawTwoDhasEdge(void)
     }
     obj->CenterPoint->x /= obj->PointNum;
     obj->CenterPoint->y /= obj->PointNum;
+    //printf("TEST:center point:%f, %f\n", obj->CenterPoint->x, obj->CenterPoint->y);
     SetPenColor(PenColor);
 }
 
@@ -479,6 +486,7 @@ void UpdateRectangle(void)
 
 bool CheckMouse(struct obj *Obj)
 {
+    printf("TEST:CheckMouse\n");
     switch (Obj->DrawType) {
         case TEXT:
             break;
@@ -503,26 +511,34 @@ bool CheckConvexPolygon(struct obj *Obj)
     double cy = polygon->CenterPoint->y;
     bool isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
     bool isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    
-
+    //printf("TEST:CheckConvexPolygon\n");
     for (i = 0; i < polygon->PointNum; i++) {
-        for (j = i; i < polygon->PointNum; j++) {
+        //printf("TEST:loop-\n");
+        for (j = i; j < polygon->PointNum; j++) {
+            //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
+                //printf("TEST:loop1:%d, %d\n", i, j);
                 if ((x - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y -polygon->pointarray[i]->y)
                      < 
                     (y - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x -polygon->pointarray[i]->x)) {
                         isRegion[i] = TRUE;
+                        //printf("TEST:loop2:%d, %d\n", i, j);//只显示到此
                     }
             }
         }
     }
+    //printf("TEST:here\n");
     for (i = 0; i < polygon->PointNum; i++) {
-        for (j = i; i < polygon->PointNum; j++) {
+        //printf("TEST:loop-\n");
+        for (j = i; j < polygon->PointNum; j++) {
+            //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
+                //printf("TEST:loop1:%d, %d\n", i, j);
                 if (( cx- polygon->pointarray[i]->x)*(polygon->pointarray[j]->y -polygon->pointarray[i]->y)
                      < 
                     (cy - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x -polygon->pointarray[i]->x)) {
                         isRegionCP[i] = TRUE;
+                        //printf("TEST:loop2:%d, %d\n", i, j);
                     }
             }
         }
