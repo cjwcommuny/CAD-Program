@@ -17,7 +17,7 @@
 
 #define MAXOBJ 50
 #define MAXPOINT 10
-#define DEFAULT_COLOR "White"
+#define DEFAULT_COLOR "Black"
 #define SELECT_COLOR "Red"
 
 typedef enum {
@@ -59,6 +59,7 @@ struct TwoDobj {
 struct TwoDhasEdge {
     struct TwoDobj *obj;
     struct Point *pointarray[MAXPOINT];
+    struct Point *CenterPoint;
     int PointNum;
     bool (*RelationMatrix)[4]; //could be generalizied
 };
@@ -80,8 +81,8 @@ const bool RectangleMatrix[4][4] = {
     {0, 1, 0, 1},
     {1, 0, 1, 0}
 };
-static int mode = DRAW; //Draw or Operate test
-static int DrawWhat = RECTANGLE; //DrawType test
+static int mode; 
+static int DrawWhat; 
 static bool isDrawing = FALSE;
 static struct Point *CurrentPoint;
 static struct RegisterADT *RegisterP;
@@ -110,12 +111,17 @@ void InitRectangle(void);
 void DrawRectangle(double x, double y, double width, double height);
 void DrawRectangle2(void);
 void UpdateRectangle(void);
+bool CheckMouse(struct obj *Obj);
+bool CheckConvexPolygon(struct obj *Obj);
+bool CompareArray(int *array1, int *array2, int length);
+void SetMode(void);
+void SetFunction(void);
 
 void Main()
 {
     SetWindowTitle("CAD Program");
     InitGraphics();
-	InitConsole();
+	//InitConsole();
     CurrentPoint = GetBlock(sizeof(struct Point));
     //startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
     InitRegister();
@@ -130,6 +136,15 @@ void KeyboardEventProcess(int key,int event)
 {
     switch (event) {
         case KEY_DOWN:
+            switch (key) {
+                case VK_F1:
+                    SetMode();
+                    break;
+                case VK_F2:
+                    break;
+                case VK_F3:
+                    break;
+            }
             break;
         case KEY_UP:
             break;
@@ -270,6 +285,7 @@ void InitRectangle(void)
     (rectangle->pointarray)[0]->x = CurrentPoint->x;
     (rectangle->pointarray)[0]->y = CurrentPoint->y;
     rectangle->RelationMatrix = RectangleMatrix;
+    rectangle->CenterPoint = GetBlock(sizeof(struct Point));
     //printf("TEST: matrix0:%d\n", RectangleMatrix[0][0]);
     //printf("TEST: matrix1:%d\n", **(rectangle->RelationMatrix));
     
@@ -370,16 +386,25 @@ void DrawTwoDhasEdge(void)
 {
     int i, j, pointnum;
     struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
-
+    string PenColor;
+    
+    PenColor = GetPenColor();
+    SetPenColor(obj->obj->color);
+    obj->CenterPoint->x = 0;
+    obj->CenterPoint->y = 0;
     pointnum = obj->PointNum; //估计是这里obj没有对应进数组导致时而内存非法访问
     //printf("TEST:%d\n", pointnum);
     for (i = 0; i < pointnum; i++) {
+         obj->CenterPoint->x += obj->pointarray[i]->x;
+         obj->CenterPoint->y += obj->pointarray[i]->y;
         for (j = i; j < pointnum; j++) {
             //printf("TEST:here\n");
             //printf("TEST:matrix: %d\n", obj->RelationMatrix[i][j]);
             if (obj->RelationMatrix[i][j]) DrawLineByPoint(obj->pointarray[i], obj->pointarray[j]);
         }
     }
+    obj->CenterPoint->x /= obj->PointNum;
+    obj->CenterPoint->y /= obj->PointNum;
 }
 
 void DrawLineByPoint(struct Point *point1, struct Point *point2)
@@ -420,4 +445,126 @@ void UpdateRectangle(void)
     temp->pointarray[1]->y = temp->pointarray[0]->y;
     temp->pointarray[3]->x = temp->pointarray[0]->x;
     temp->pointarray[3]->y = temp->pointarray[2]->y;
+}
+
+bool CheckMouse(struct obj *Obj)
+{
+    switch (Obj->DrawType) {
+        case TEXT:
+            break;
+        case LINE:
+            break;
+        case RECTANGLE:
+            return CheckConvexPolygon(Obj);
+        case ELLIPSE:
+            break;
+        case LOCUS:
+            break;
+    }
+}
+
+bool CheckConvexPolygon(struct obj *Obj)
+{
+    int i, j;
+    double x = CurrentPoint->x;
+    double y = CurrentPoint->y;
+    struct TwoDhasEdge *polygon = Obj->objPointer;
+    double cx = polygon->CenterPoint->x;
+    double cy = polygon->CenterPoint->y;
+    bool isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
+    bool isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    
+
+    for (i = 0; i < polygon->PointNum; i++) {
+        for (j = i; i < polygon->PointNum; j++) {
+            if (polygon->RelationMatrix[i][j]) {
+                if ((x - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y -polygon->pointarray[i]->y)
+                     < 
+                    (y - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x -polygon->pointarray[i]->x)) {
+                        isRegion[i] = TRUE;
+                    }
+            }
+        }
+    }
+    for (i = 0; i < polygon->PointNum; i++) {
+        for (j = i; i < polygon->PointNum; j++) {
+            if (polygon->RelationMatrix[i][j]) {
+                if (( cx- polygon->pointarray[i]->x)*(polygon->pointarray[j]->y -polygon->pointarray[i]->y)
+                     < 
+                    (cy - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x -polygon->pointarray[i]->x)) {
+                        isRegionCP[i] = TRUE;
+                    }
+            }
+        }
+    }
+    if (CompareArray(isRegion, isRegionCP, sizeof(isRegion)/sizeof(isRegion[0]))) return TRUE;
+    else return FALSE;
+}
+
+bool CompareArray(int *array1, int *array2, int length)
+{
+    bool flag = TRUE;
+    int i;
+
+    while (--length) {
+        if (array1[length] != array2[length]) {
+            flag = FALSE;
+            break;
+        }
+    }
+    return flag;
+}
+
+void SetMode(void)
+{
+    int input;
+
+    InitConsole();
+    printf("Which mode do you want? Choose the index from below.\n");
+    printf("1: Draw object\n2: Type text\n3: Operate object\n");
+    scanf("%d", &input); //wrong input prompt
+    switch (input) {
+        case 1:
+            mode = DRAW;
+            SetFunction();
+            break;
+        case 2:
+            mode = DRAW; //draw and text are handled together
+            SetFunction();
+            break;
+        case 3:
+            mode = OPERATE;
+            SetFunction();
+            break;
+    }
+    //how to close the console?
+}
+
+void SetFunction(void)
+{
+    int input;
+
+    switch (mode) {
+        case DRAW:
+            printf("What object do you want to draw?\n");
+            printf("1:Line\n2:Rectangle\n3:Ellipse\n4:Any curve\n");
+            scanf("%d", &input); //wrong input prompt
+            switch (input) {
+                case 1:
+                    DrawWhat = LINE;
+                    break;
+                case 2:
+                    DrawWhat = RECTANGLE;
+                    break;
+                case 3:
+                    DrawWhat = ELLIPSE;
+                    break;
+                case 4:
+                    DrawWhat = LOCUS;
+                    break;
+            }
+            break;
+        case OPERATE:
+            break;
+    }
 }
