@@ -260,11 +260,12 @@ static void LeftMouseDownOperate(void)
     isOperating = TRUE;
     for (i = 0; i < objnum; i++) {
         if (CheckMouse(RegisterP->RegisterObj[i])) {
-            printf("TEST:here\n");
+            //printf("TEST:here\n");
             //SelcectArray[j] = i;
             DrawWhat = RegisterP->RegisterObj[i]->DrawType;
-            RegisterP->RegisterObj[i]->color = SELECT_COLOR;
             RegisterP->ActiveOne = i;
+            if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+            else RegisterP->RegisterObj[i]->color = SELECT_COLOR;
             ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
             flag = 1;
             //printf("TEST:here\n");
@@ -273,7 +274,7 @@ static void LeftMouseDownOperate(void)
         }
     }
     //printf("TEST:here\n");
-    if (!flag /*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
+    if (!flag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
         //printf("TEST:here\n");
         for (i = 0; i < objnum; i++) {
             RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
@@ -389,7 +390,7 @@ void RefreshAndDraw2(void)
 {
     int i , objnum = RegisterP->ObjNum, temp;
     struct obj *position;
-    printf("TEST:RefreshAndDraw\n");
+    //printf("TEST:RefreshAndDraw\n");
     RefreshDisplay();
 
     temp = RegisterP->ActiveOne;
@@ -539,7 +540,7 @@ bool CheckConvexPolygon(struct obj *Obj)
     double cy = polygon->CenterPoint->y;
     int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
     int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    printf("TEST:CheckConvexPolygon\n");
+    //printf("TEST:CheckConvexPolygon\n");
     for (i = 0; i < polygon->PointNum; i++) {
         //printf("TEST:loop-\n");
         for (j = i; j < polygon->PointNum; j++) {
