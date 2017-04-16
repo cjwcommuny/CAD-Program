@@ -647,7 +647,7 @@ bool CheckMouse(struct obj *Obj)
 
 bool CheckConvexPolygon(struct obj *Obj)
 {
-    int i, j;
+    int i, j, k = 0;
     double x = CurrentPoint->x;
     double y = CurrentPoint->y;
     struct TwoDhasEdge *polygon = Obj->objPointer;
@@ -655,26 +655,33 @@ bool CheckConvexPolygon(struct obj *Obj)
     double cy = Obj->CenterPoint->y;
     int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
     int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    printf("TEST:centerpoint: %f, %f\n", cx, cy);
     //printf("TEST:CheckConvexPolygon\n");
     for (i = 0; i < polygon->PointNum; i++) {
         //printf("TEST:loop-\n");
         for (j = i; j < polygon->PointNum; j++) {
             //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
-                //printf("TEST:loop1:%d, %d\n", i, j);
-                if (polygon->pointarray[i]->x == polygon->pointarray[j]->x && y - polygon->pointarray[i]->y > 0) {
-                        isRegion[i] = 1;
-                } else if (polygon->pointarray[j]->y == polygon->pointarray[i]->y && x - polygon->pointarray[i]->x > 0) {
-                        isRegion[i] = 1;
-                } else if ((x - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y - polygon->pointarray[i]->y)
+                printf("TEST:loop:%d, %d\n", i, j);
+                printf("TEST:x: %f, y %f\n", polygon->pointarray[i]->x, polygon->pointarray[i]->y);
+                if (polygon->pointarray[i]->x == polygon->pointarray[j]->x) {
+                    if (x > polygon->pointarray[i]->x) isRegion[k] = 1;
+                    k++;
+                } else if (polygon->pointarray[i]->y == polygon->pointarray[j]->y) {
+                    if (y > polygon->pointarray[i]->y) isRegion[k] = 1;
+                    k++;
+                } else if ((x - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y - polygon->pointarray[i]->y)/(polygon->pointarray[j]->x - polygon->pointarray[i]->x)
                      < 
-                    (y - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x - polygon->pointarray[i]->x)) {
-                        isRegion[i] = 1;
+                    (y - polygon->pointarray[i]->y)) {
+                        isRegion[k++] = 1;
                         //printf("TEST:loop2:%d, %d\n", i, j);
-                    }
+                } else {
+                    k++;
+                }
             }
         }
     }
+    k = 0;
     //printf("TEST:here\n");
     for (i = 0; i < polygon->PointNum; i++) {
         //printf("TEST:loop-\n");
@@ -682,20 +689,24 @@ bool CheckConvexPolygon(struct obj *Obj)
             //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
                 //printf("TEST:loop1:%d, %d\n", i, j);
-                if (polygon->pointarray[i]->x == polygon->pointarray[j]->x && cy - polygon->pointarray[i]->y > 0) {
-                        isRegionCP[i] = 1;
-                } else if (polygon->pointarray[j]->y == polygon->pointarray[i]->y && cx - polygon->pointarray[i]->x > 0) {
-                        isRegionCP[i] = 1;
-                } else if ((cx - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y - polygon->pointarray[i]->y)
+                if (polygon->pointarray[i]->x == polygon->pointarray[j]->x) {
+                    if (cx > polygon->pointarray[i]->x) isRegionCP[k] = 1;
+                    k++;
+                } else if (polygon->pointarray[i]->y == polygon->pointarray[j]->y) {
+                    if (cy > polygon->pointarray[i]->y) isRegionCP[k] = 1;
+                    k++;
+                } else if ((cx - polygon->pointarray[i]->x)*(polygon->pointarray[j]->y - polygon->pointarray[i]->y)/(polygon->pointarray[j]->x - polygon->pointarray[i]->x)
                      < 
-                    (cy - polygon->pointarray[i]->y)*(polygon->pointarray[j]->x - polygon->pointarray[i]->x)) {
-                        isRegionCP[i] = 1;
+                    (cy - polygon->pointarray[i]->y)) {
+                        isRegionCP[k++] = 1;
                         //printf("TEST:loop2:%d, %d\n", i, j);
-                    }
+                } else {
+                    k++;
+                }
             }
         }
     }
-    /*printf("isRegion:\n");
+    printf("isRegion:\n");
     for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
         printf("%d ", isRegion[i]);
         printf("\n");
