@@ -477,6 +477,9 @@ void RefreshAndDraw2(void)
         SetPenColor(position->color);
         DrawWhat = position->DrawType;
         RegisterP->ActiveOne = i;
+        if (position->color == SELECT_COLOR) {
+            DrawRotatePoint(position);
+        }
         ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
     SetPenColor(PenColor);
@@ -791,6 +794,7 @@ void DrawRotatePointForConvexPolygon(struct obj *Obj)
     //printf("TEST:here\n");
     PenColor = GetPenColor();
     SetPenColor(Obj->color);
+    //printf("TEST:window: %f, %f\n", GetWindowWidth(), GetWindowHeight());
     //printf("TEST:%s\n", GetPenColor());
     DrawDottedLine(((struct TwoDhasEdge *) (Obj->objPointer))->CenterPoint, Obj->RotatePoint);
     SetPenColor(POINT_COLOR);
