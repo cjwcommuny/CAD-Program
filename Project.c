@@ -24,7 +24,7 @@
 #define DL 0.05
 #define POINT_R 0.05
 #define ROTATE_POINT_RANGE 0.1
-
+#define PI 3.14159
 typedef enum {
     CURRENT_POINT_TIMER = 1
 } timerID;
@@ -951,6 +951,12 @@ void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
     //l = sqrt(pow(x2-x1, 2) + pow(y2-y1, 2));
     //cos0 = (r1*r1 + r2*r2 -l*l) / (2*r1*r2);
     angle = atan((y2-yc)/(x2-xc)) - atan((y1-yc)/(x1-xc));
+    if (x1 - xc < 0) {
+        angle -= PI;
+    }
+    if (x2 - xc < 0) {
+        angle += PI;
+    }
     ChooseDrawWhat(/*,,*/RotatePolygon/*,,*/);
     RefreshAndDraw2();
 }
