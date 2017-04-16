@@ -23,6 +23,7 @@
 #define POINT_COLOR "Magenta"
 #define DL 0.05
 #define POINT_R 0.05
+#define ROTATE_POINT_RANGE 0.1
 
 typedef enum {
     CURRENT_POINT_TIMER = 1
@@ -145,6 +146,9 @@ void DrawDottedLine(struct Point *point1, struct Point *point2);
 void DrawPoint(double x, double y);
 void DrawCenteredCircle(double x, double y, double r);
 void test(void);
+bool CheckRotate(void);
+bool InsideRotatePoint(struct obj *Obj);
+
 
 void Main()
 {
@@ -285,48 +289,55 @@ static void LeftMouseDownOperate(void)
     //printf("objnum:%d\n", objnum);
     //int SelcectArray[MAXOBJ];
     //printf("TEST:LeftMouseDownOperate\n");
-    isOperating = TRUE;
-    for (i = 0; i < objnum; i++) {
-        if (CheckMouse(RegisterP->RegisterObj[i])) {
-            //printf("TEST:here\n");
-            //SelcectArray[j] = i;
-            DrawWhat = RegisterP->RegisterObj[i]->DrawType;
-            RegisterP->ActiveOne = i;
-            if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
-                RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
-                RedNum--;
-            } else {
-                if (RedNum >= 1) {
-                    for (j = 0; j < objnum; j++) {
-                        RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+    if (CheckRotate()) {
+        isRotating = TRUE;
+    } else {
+        isOperating = TRUE;
+        for (i = 0; i < objnum; i++) {
+            if (CheckMouse(RegisterP->RegisterObj[i])) {
+                //printf("TEST:here\n");
+                //SelcectArray[j] = i;
+                DrawWhat = RegisterP->RegisterObj[i]->DrawType;
+                RegisterP->ActiveOne = i;
+                if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
+                    RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+                    RedNum--;
+                    RegisterP->ActiveOne = -1;
+                } else {
+                    if (RedNum >= 1) {
+                        for (j = 0; j < objnum; j++) {
+                            RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+                        }
                     }
+                    RegisterP->RegisterObj[i]->color = SELECT_COLOR;
+                    DrawRotatePoint(RegisterP->RegisterObj[i]);
+                    RedNum++;
+                    RegisterP->ActiveOne = i;
                 }
-                RegisterP->RegisterObj[i]->color = SELECT_COLOR;
-                DrawRotatePoint(RegisterP->RegisterObj[i]);
-                RedNum++;
+                RefreshAndDraw2();
+                //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+                SelectFlag = 1;
+                
+                //printf("TEST:here\n");
+                break;
+                //j++;
+            }
+        }
+        //printf("TEST:here\n");
+        if (!SelectFlag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
+            //printf("TEST:here\n");
+            for (i = 0; i < objnum; i++) {
+                RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
             }
             RefreshAndDraw2();
-            //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
-            SelectFlag = 1;
-            
-            //printf("TEST:here\n");
-            break;
-            //j++;
         }
-    }
-    //printf("TEST:here\n");
-    if (!SelectFlag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
-        //printf("TEST:here\n");
-        for (i = 0; i < objnum; i++) {
-            RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
-        }
-        RefreshAndDraw2();
     }
 }
 
 static void LeftMouseUpOperate(void)
 {
     isOperating = FALSE;
+    isRotating = FALSE;
 }
 
 static void LeftMouseMoveOperate(void)
@@ -341,6 +352,8 @@ static void LeftMouseMoveOperate(void)
         for (i = 0; i < RegisterP->ObjNum; i++) {
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
         }
+    } else if (isRotating) {
+        Rotate()
     }
 }
 
@@ -894,8 +907,24 @@ bool CheckRotate(void)
 {
     int i;
 
-    int objnum = registerP->ObjNum;
+    int objnum = RegisterP->ObjNum;
     for (i = 0; i < objnum; i++) {
-        
+        if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
+            if (InsideRotatePoint(RegisterP->RegisterObj[i])) {
+                RegisterP->ActiveOne = i;
+                return TRUE;
+            }
+        }
     }
+    return FALSE;
+}
+
+bool InsideRotatePoint(struct obj *Obj) 
+{
+    double x = Obj->RotatePoint->x;
+    double y = Obj->RotatePoint->y;
+    double r2 = pow(ROTATE_POINT_RANGE, 2);
+
+    if (pow(CurrentPoint->x - x, 2) + pow(CurrentPoint->y - y, 2) <= r2) return TRUE;
+    else return FALSE;
 }
