@@ -64,7 +64,7 @@ struct Point {
 struct TwoDhasEdge {
     //struct TwoDobj *obj;
     struct Point *pointarray[MAXPOINT];
-    struct Point *CenterPoint;
+    //struct Point *CenterPoint;
     int PointNum;
     bool (*RelationMatrix)[4]; //could be generalizied
 };
@@ -75,6 +75,7 @@ struct obj {
     string color;
     int DegreePointFreedom;
     struct Point *RotatePoint;
+    struct Point *CenterPoint;
 };
 
 struct RegisterADT {
@@ -97,6 +98,7 @@ static bool isRotating = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
 static int RedNum = 0;
+static double angle;
 
 void KeyboardEventProcess(int key,int event);
 void CharEventProcess(char c);
@@ -148,6 +150,8 @@ void DrawCenteredCircle(double x, double y, double r);
 void test(void);
 bool CheckRotate(void);
 bool InsideRotatePoint(struct obj *Obj);
+void rotate(double x1, double y1, double x2, double y2);
+void RotatePolygon(void);
 
 
 void Main()
@@ -353,7 +357,7 @@ static void LeftMouseMoveOperate(void)
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
         }
     } else if (isRotating) {
-        Rotate()
+        rotate(x0, y0, x1, y1);
     }
 }
 
@@ -430,7 +434,7 @@ void InitRectangle(void)
     (rectangle->pointarray)[0]->x = CurrentPoint->x;
     (rectangle->pointarray)[0]->y = CurrentPoint->y;
     rectangle->RelationMatrix = RectangleMatrix;
-    rectangle->CenterPoint = GetBlock(sizeof(struct Point));
+    //rectangle->CenterPoint = GetBlock(sizeof(struct Point));
     //printf("TEST: matrix0:%d\n", RectangleMatrix[0][0]);
     //printf("TEST: matrix1:%d\n", **(rectangle->RelationMatrix));
     
@@ -524,6 +528,7 @@ void Register(void *objPt, int type)
     objP->DrawType = type;
     objP->color = DEFAULT_COLOR;
     objP->RotatePoint = GetBlock(sizeof(struct Point));
+    objP->CenterPoint = GetBlock(sizeof(struct Point));
     (RegisterP->RegisterObj)[RegisterP->ObjNum] = objP;
     //printf("TEST: register num:%d\n", RegisterP->ObjNum);
     //printf("TEST: DrawType: %d\n", (RegisterP->RegisterObj)[(RegisterP->ObjNum)-1]->DrawType);
@@ -556,25 +561,26 @@ void DrawTwoDhasEdge(void)
 {
     int i, j, pointnum;
     struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    struct obj *Obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
     //string PenColor;
     
     //PenColor = GetPenColor();
     SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
-    obj->CenterPoint->x = 0;
-    obj->CenterPoint->y = 0;
+    Obj->CenterPoint->x = 0;
+    Obj->CenterPoint->y = 0;
     pointnum = obj->PointNum; 
     //printf("TEST:%d\n", pointnum);
     for (i = 0; i < pointnum; i++) {
-         obj->CenterPoint->x += obj->pointarray[i]->x;
-         obj->CenterPoint->y += obj->pointarray[i]->y;
+         Obj->CenterPoint->x += obj->pointarray[i]->x;
+         Obj->CenterPoint->y += obj->pointarray[i]->y;
         for (j = i; j < pointnum; j++) {
             //printf("TEST:here\n");
             //printf("TEST:matrix: %d\n", obj->RelationMatrix[i][j]);
             if (obj->RelationMatrix[i][j]) DrawLineByPoint(obj->pointarray[i], obj->pointarray[j]);
         }
     }
-    obj->CenterPoint->x /= obj->PointNum;
-    obj->CenterPoint->y /= obj->PointNum;
+    Obj->CenterPoint->x /= obj->PointNum;
+    Obj->CenterPoint->y /= obj->PointNum;
     CreateRotatePointForConvexPolygon((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
     //printf("TEST:center point:%f, %f\n", obj->CenterPoint->x, obj->CenterPoint->y);
     //SetPenColor(PenColor);
@@ -643,8 +649,8 @@ bool CheckConvexPolygon(struct obj *Obj)
     double x = CurrentPoint->x;
     double y = CurrentPoint->y;
     struct TwoDhasEdge *polygon = Obj->objPointer;
-    double cx = polygon->CenterPoint->x;
-    double cy = polygon->CenterPoint->y;
+    double cx = Obj->CenterPoint->x;
+    double cy = Obj->CenterPoint->y;
     int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
     int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //printf("TEST:CheckConvexPolygon\n");
@@ -806,8 +812,8 @@ void CreateRotatePointForConvexPolygon(struct obj *Obj)
 
     MiddlePoint->x = (temp->pointarray[1]->x + temp->pointarray[2]->x)/2;
     MiddlePoint->y = (temp->pointarray[1]->y + temp->pointarray[2]->y)/2;
-    Obj->RotatePoint->x = 1.5*(MiddlePoint->x - temp->CenterPoint->x) + temp->CenterPoint->x;
-    Obj->RotatePoint->y = 1.5*(MiddlePoint->y - temp->CenterPoint->y) + temp->CenterPoint->y;
+    Obj->RotatePoint->x = 1.5*(MiddlePoint->x - Obj->CenterPoint->x) + Obj->CenterPoint->x;
+    Obj->RotatePoint->y = 1.5*(MiddlePoint->y - Obj->CenterPoint->y) + Obj->CenterPoint->y;
 }
 
 void DrawRotatePointForConvexPolygon(struct obj *Obj)
@@ -818,7 +824,7 @@ void DrawRotatePointForConvexPolygon(struct obj *Obj)
     SetPenColor(Obj->color);
     //printf("TEST:window: %f, %f\n", GetWindowWidth(), GetWindowHeight());
     //printf("TEST:%s\n", GetPenColor());
-    DrawDottedLine(((struct TwoDhasEdge *) (Obj->objPointer))->CenterPoint, Obj->RotatePoint);
+    DrawDottedLine(Obj->CenterPoint, Obj->RotatePoint);
     SetPenColor(POINT_COLOR);
     DrawPoint(GetCurrentX(), GetCurrentY());
     SetPenColor(PenColor);
@@ -927,4 +933,38 @@ bool InsideRotatePoint(struct obj *Obj)
 
     if (pow(CurrentPoint->x - x, 2) + pow(CurrentPoint->y - y, 2) <= r2) return TRUE;
     else return FALSE;
+}
+
+void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
+{
+    double xc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
+    double yc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
+    double r1, r2, l;
+    //double tempX, tempY;
+    int i;
+
+    //r1 = sqrt(pow(x1-xc, 2) + pow(y1-yc, 2));
+    //r2 = sqrt(pow(x2-xc, 2) + pow(y2-yc, 2));
+    //l = sqrt(pow(x2-x1, 2) + pow(y2-y1, 2));
+    //cos0 = (r1*r1 + r2*r2 -l*l) / (2*r1*r2);
+    angle = atan((y2-yc)/(x2-xc)) - atan((y1-yc)/(x1-xc));
+    ChooseDrawWhat(/*,,*/RotatePolygon/*,,*/);
+    RefreshAndDraw2();
+}
+
+void RotatePolygon(void) //also works when obj is TwoDhasEdge
+{
+    struct TwoDhasEdge *Polygon = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+    int pointnum = Polygon->PointNum;
+    int i;
+    double xc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
+    double yc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
+
+    for (i = 0; i < pointnum; i++) {
+        double tempX = Polygon->pointarray[i]->x;
+        double tempY = Polygon->pointarray[i]->y;
+
+        Polygon->pointarray[i]->x = (tempX - xc) * cos(angle) + (yc - tempY) * sin(angle) + xc;
+        Polygon->pointarray[i]->y = (tempX - xc) * sin(angle) + (tempY - yc) * cos(angle) + yc;
+    }
 }
