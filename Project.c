@@ -92,6 +92,7 @@ static int mode;
 static int DrawWhat; 
 static bool isDrawing = FALSE;
 static bool isOperating = FALSE;
+static bool isRotating = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
 static int RedNum = 0;
@@ -887,4 +888,14 @@ void test(void)
     point2->x = 2;
     point2->y = 1;
     DrawDottedLine(point1, point2);
+}
+
+bool CheckRotate(void) 
+{
+    int i;
+
+    int objnum = registerP->ObjNum;
+    for (i = 0; i < objnum; i++) {
+        
+    }
 }
