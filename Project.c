@@ -493,6 +493,7 @@ void RefreshAndDraw2(void)
     int i , objnum = RegisterP->ObjNum, temp;
     struct obj *position;
     string PenColor;
+    int activeone = RegisterP->ActiveOne;
     //printf("TEST:RefreshAndDraw\n");
     RefreshDisplay();
 
@@ -509,6 +510,7 @@ void RefreshAndDraw2(void)
         ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
     SetPenColor(PenColor);
+    RegisterP->ActiveOne = activeone;
 }
 
 struct Point *CopyPoint(struct Point *point)
@@ -912,12 +914,13 @@ void test(void)
 bool CheckRotate(void) 
 {
     int i;
-
     int objnum = RegisterP->ObjNum;
+
     for (i = 0; i < objnum; i++) {
         if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
             if (InsideRotatePoint(RegisterP->RegisterObj[i])) {
                 RegisterP->ActiveOne = i;
+                //printf("TEST:rotate: %d\n", i);
                 return TRUE;
             }
         }
@@ -939,9 +942,9 @@ void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
 {
     double xc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
     double yc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
-    double r1, r2, l;
+    //double r1, r2, l;
     //double tempX, tempY;
-    int i;
+    //int i;
 
     //r1 = sqrt(pow(x1-xc, 2) + pow(y1-yc, 2));
     //r2 = sqrt(pow(x2-xc, 2) + pow(y2-yc, 2));
@@ -959,7 +962,7 @@ void RotatePolygon(void) //also works when obj is TwoDhasEdge
     int i;
     double xc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
     double yc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
-
+    //printf("TEST:rotate:%d\n", RegisterP->ActiveOne);
     for (i = 0; i < pointnum; i++) {
         double tempX = Polygon->pointarray[i]->x;
         double tempY = Polygon->pointarray[i]->y;
