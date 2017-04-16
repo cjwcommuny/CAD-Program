@@ -73,6 +73,7 @@ struct obj {
     int DrawType;
     string color;
     int DegreePointFreedom;
+    struct Point *RotatePoint;
 };
 
 struct RegisterADT {
@@ -103,6 +104,11 @@ void GetCurrentPoint(void);
 static void ChooseButton(void (*left1)(void), void (*left2)(void)/*, 
                          void (*right1)(void), void (*right2)(void), 
                          void (*middle1)(void), void (*middle2)(void)*/, int button);
+void ChooseDrawWhat(/*void (*text)(void), 
+                    void (*line)(void),*/
+                    void (*rectangle)(void)/*, 
+                    void (*ellipse)(void), 
+                    void (*locus)(void)*/);
 static void ChooseMode(void (*draw)(void), void (*operate)(void));
 static void LeftMouseDownDraw(void);
 static void LeftMouseUpDraw(void);
@@ -129,17 +135,21 @@ void SetMode(void);
 void SetFunction(void);
 void PlaceHolder(void);
 void MoveObj(struct obj *Obj, double dx, double dy);
-CreateRotatePoint(struct obj *Obj);
-void CreateRotatePointForRectangle(struct obj *Obj);
+void DrawRotatePoint(struct obj *Obj);
+void CreateRotatePointForConvexPolygon(struct obj *Obj);
+void DrawRotatePointForConvexPolygon(struct obj *Obj);
+//void CreateRotatePointForRectangle(struct obj *Obj);
 void DrawDottedLine(struct Point *point1, struct Point *point2);
 void DrawPoint(double x, double y);
 void DrawCenteredCircle(double x, double y, double r);
+void test(void);
 
 void Main()
 {
     SetWindowTitle("CAD Program");
     InitGraphics();
 	//InitConsole();
+    //test();
     CurrentPoint = GetBlock(sizeof(struct Point));
     PreviousPoint = GetBlock(sizeof(struct Point));
     PreviousPoint->x = 0;
@@ -280,11 +290,16 @@ static void LeftMouseDownOperate(void)
             //SelcectArray[j] = i;
             DrawWhat = RegisterP->RegisterObj[i]->DrawType;
             RegisterP->ActiveOne = i;
-            if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
-            else RegisterP->RegisterObj[i]->color = SELECT_COLOR;
-            ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+            if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
+                RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+            } else {
+                RegisterP->RegisterObj[i]->color = SELECT_COLOR;
+                DrawRotatePoint(RegisterP->RegisterObj[i]);
+            }
+            RefreshAndDraw2();
+            //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
             SelectFlag = 1;
-            CreateRotatePoint(RegisterP->RegisterObj[i]);
+            
             //printf("TEST:here\n");
             break;
             //j++;
@@ -451,16 +466,20 @@ void RefreshAndDraw2(void)
 {
     int i , objnum = RegisterP->ObjNum, temp;
     struct obj *position;
+    string PenColor;
     //printf("TEST:RefreshAndDraw\n");
     RefreshDisplay();
 
+    PenColor = GetPenColor();
     temp = RegisterP->ActiveOne;
     for (i = 0; i < objnum; i++) {
         position = RegisterP->RegisterObj[i];
+        SetPenColor(position->color);
         DrawWhat = position->DrawType;
         RegisterP->ActiveOne = i;
         ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
+    SetPenColor(PenColor);
 }
 
 struct Point *CopyPoint(struct Point *point)
@@ -479,6 +498,7 @@ void Register(void *objPt, int type)
     objP->objPointer = objPt;
     objP->DrawType = type;
     objP->color = DEFAULT_COLOR;
+    objP->RotatePoint = GetBlock(sizeof(struct Point));
     (RegisterP->RegisterObj)[RegisterP->ObjNum] = objP;
     //printf("TEST: register num:%d\n", RegisterP->ObjNum);
     //printf("TEST: DrawType: %d\n", (RegisterP->RegisterObj)[(RegisterP->ObjNum)-1]->DrawType);
@@ -530,6 +550,7 @@ void DrawTwoDhasEdge(void)
     }
     obj->CenterPoint->x /= obj->PointNum;
     obj->CenterPoint->y /= obj->PointNum;
+    CreateRotatePointForConvexPolygon((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
     //printf("TEST:center point:%f, %f\n", obj->CenterPoint->x, obj->CenterPoint->y);
     //SetPenColor(PenColor);
 }
@@ -552,7 +573,7 @@ void DrawRectangle(double x, double y, double width, double height)
 
 void DrawRectangle2(void)
 {
-    struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    //struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
     //printf("TEST: pointnum:%d\n", ((struct TwoDhasEdge *)((RegisterP->RegisterObj[RegisterP->ActiveOne])->objPointer))->PointNum);
     UpdateRectangle();
     DrawTwoDhasEdge();
@@ -641,12 +662,12 @@ bool CheckConvexPolygon(struct obj *Obj)
             }
         }
     }
-    /*printf("isRegion:");
+    /*printf("isRegion:\n");
     for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
         printf("%d ", isRegion[i]);
         printf("\n");
     }
-    printf("isRegionCP:");
+    printf("isRegionCP:\n");
     for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
         printf("%d ", isRegionCP[i]);
         printf("\n");
@@ -660,8 +681,8 @@ bool CompareArray(int *array1, int *array2, int length)
     bool flag = TRUE;
     int i;
 
-    while (--length) {
-        if (array1[length] != array2[length]) {
+    for (i = 0; i < length; i++) {
+        if (array1[i] != array2[i]) {
             flag = FALSE;
             break;
         }
@@ -740,20 +761,44 @@ void PlaceHolder(void)
     //no operate
 }
 
-CreateRotatePoint(struct obj *Obj)
+void DrawRotatePoint(struct obj *Obj)
 {
     switch (Obj->DrawType) {
         case LINE:
             break;
         case RECTANGLE:
-            CreateRotatePointForRectangle(Obj);
+            DrawRotatePointForConvexPolygon(Obj);
             break;
         case ELLIPSE:
             break;
     }
 }
 
-void CreateRotatePointForRectangle(struct obj *Obj)
+void CreateRotatePointForConvexPolygon(struct obj *Obj)
+{
+    struct TwoDhasEdge *temp = Obj->objPointer;
+    struct Point *MiddlePoint = GetBlock(sizeof(struct Point));
+
+    MiddlePoint->x = (temp->pointarray[1]->x + temp->pointarray[2]->x)/2;
+    MiddlePoint->y = (temp->pointarray[1]->y + temp->pointarray[2]->y)/2;
+    Obj->RotatePoint->x = 1.5*(MiddlePoint->x - temp->CenterPoint->x) + temp->CenterPoint->x;
+    Obj->RotatePoint->y = 1.5*(MiddlePoint->y - temp->CenterPoint->y) + temp->CenterPoint->y;
+}
+
+void DrawRotatePointForConvexPolygon(struct obj *Obj)
+{
+    string PenColor;
+    //printf("TEST:here\n");
+    PenColor = GetPenColor();
+    SetPenColor(Obj->color);
+    //printf("TEST:%s\n", GetPenColor());
+    DrawDottedLine(((struct TwoDhasEdge *) (Obj->objPointer))->CenterPoint, Obj->RotatePoint);
+    SetPenColor(POINT_COLOR);
+    DrawPoint(GetCurrentX(), GetCurrentY());
+    SetPenColor(PenColor);
+}
+
+/*void CreateRotatePointForRectangle(struct obj *Obj)
 {
     struct TwoDhasEdge *temp = Obj->objPointer;
     struct Point *MiddlePoint = GetBlock(sizeof(struct Point));
@@ -775,7 +820,7 @@ void CreateRotatePointForRectangle(struct obj *Obj)
     SetPenColor(POINT_COLOR);
     DrawPoint(GetCurrentX(), GetCurrentY());
     SetPenColor(PenColor);
-}
+}*/
 
 void DrawDottedLine(struct Point *point1, struct Point *point2)
 {
@@ -786,18 +831,27 @@ void DrawDottedLine(struct Point *point1, struct Point *point2)
     double sin0 = (point2->y - point1->y)/len;
     bool flag = FALSE;
     bool EraseMode = GetEraseMode();
+    //printf("TEST:EraseMode1: %d\n", EraseMode);
     //printf("here\n");
+    //printf("TEST:color:%s\n", GetPenColor());
     MovePen(point1->x, point1->y);
+    //printf("TEST:1: %f, %f\n2: %f, %f\n", point1->x, point1->y, point2->x, point2->y);
+    //printf("TEST:point:%f, %f\n", point1->x, point1->y);
     //printf("here\n");
     //printf("TEST: %f\n", len);
+    //SetPenColor("Red");
+    SetEraseMode(FALSE);
     while (length <= len) {
         //printf("here\n");
+        //DrawLine(1, 1);
         DrawLine(DL*cos0, DL*sin0);
+        //printf("TEST:cos:%f , sin:%f\n", cos0, sin0);
         flag = !flag;
         SetEraseMode(flag);
         length += DL;
     }
     SetEraseMode(EraseMode);
+    //printf("TEST:EraseMode2: %d\n", EraseMode);
     //printf("here\n");
 }
 
@@ -810,4 +864,15 @@ void DrawCenteredCircle(double x, double y, double r)
 {
     MovePen(x + r, y);
     DrawArc(r, 0.0, 360.0);
+}
+
+void test(void)
+{
+    struct Point *point1 = GetBlock(sizeof(struct Point));
+    struct Point *point2 = GetBlock(sizeof(struct Point));
+    point1->x = 0;
+    point1->y = 0;
+    point2->x = 2;
+    point2->y = 1;
+    DrawDottedLine(point1, point2);
 }
