@@ -94,6 +94,7 @@ static bool isDrawing = FALSE;
 static bool isOperating = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
+static int RedNum = 0;
 
 void KeyboardEventProcess(int key,int event);
 void CharEventProcess(char c);
@@ -277,7 +278,7 @@ static void LeftMouseMoveDraw(void)
 
 static void LeftMouseDownOperate(void)
 {
-    int i/*, j = 0*/;
+    int i, j;
     int objnum = RegisterP->ObjNum;
     bool SelectFlag = 0;
     //printf("objnum:%d\n", objnum);
@@ -292,9 +293,16 @@ static void LeftMouseDownOperate(void)
             RegisterP->ActiveOne = i;
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
                 RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+                RedNum--;
             } else {
+                if (RedNum >= 1) {
+                    for (j = 0; j < objnum; j++) {
+                        RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+                    }
+                }
                 RegisterP->RegisterObj[i]->color = SELECT_COLOR;
                 DrawRotatePoint(RegisterP->RegisterObj[i]);
+                RedNum++;
             }
             RefreshAndDraw2();
             //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
