@@ -1033,5 +1033,8 @@ void GetShape(void)
 
 void GetLineShape()
 {
+    struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
 
+    temp->pointarray[1]->x = CurrentPoint->x;
+    temp->pointarray[1]->y = CurrentPoint->y;
 }
