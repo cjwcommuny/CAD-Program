@@ -655,15 +655,15 @@ bool CheckConvexPolygon(struct obj *Obj)
     double cy = Obj->CenterPoint->y;
     int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
     int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    printf("TEST:centerpoint: %f, %f\n", cx, cy);
+    //printf("TEST:centerpoint: %f, %f\n", cx, cy);
     //printf("TEST:CheckConvexPolygon\n");
     for (i = 0; i < polygon->PointNum; i++) {
         //printf("TEST:loop-\n");
         for (j = i; j < polygon->PointNum; j++) {
             //printf("TEST:loop0\n");
             if (polygon->RelationMatrix[i][j]) {
-                printf("TEST:loop:%d, %d\n", i, j);
-                printf("TEST:x: %f, y %f\n", polygon->pointarray[i]->x, polygon->pointarray[i]->y);
+                //printf("TEST:loop:%d, %d\n", i, j);
+                //printf("TEST:x: %f, y %f\n", polygon->pointarray[i]->x, polygon->pointarray[i]->y);
                 if (polygon->pointarray[i]->x == polygon->pointarray[j]->x) {
                     if (x > polygon->pointarray[i]->x) isRegion[k] = 1;
                     k++;
@@ -706,7 +706,7 @@ bool CheckConvexPolygon(struct obj *Obj)
             }
         }
     }
-    printf("isRegion:\n");
+    /*printf("isRegion:\n");
     for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
         printf("%d ", isRegion[i]);
         printf("\n");
