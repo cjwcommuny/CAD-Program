@@ -101,14 +101,20 @@ const bool LineMatrix[] = {
     1, 0
 };
 static int mode; 
-static int DrawWhat; 
+static int DrawWhat;
+static bool isMouseDown = FALSE;
+static bool isMouseDownMoving = FALSE;
 static bool isDrawing = FALSE;
 static bool isOperating = FALSE;
 static bool isRotating = FALSE;
+static bool isMovingObj = FALSE;
+static bool isCacelSelect = FALSE;
+//static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
-static int RedNum = 0;
+static int SelectNum = 0;
 static double angle;
+
 
 void KeyboardEventProcess(int key,int event);
 void CharEventProcess(char c);
@@ -227,10 +233,13 @@ void MouseEventProcess(int x, int y, int button, int event)
 
     switch (event) {
         case BUTTON_DOWN:
+            isMouseDown = TRUE;
             ChooseButton(LeftMouseDownDraw, LeftMouseDownOperate/*,,,,*/, button);
             break;
         case BUTTON_UP:
+            isMouseDown = FALSE;
             ChooseButton(LeftMouseUpDraw, LeftMouseUpOperate/*,,,,*/, button);
+            isMouseDownMoving = FALSE;
             break;
         case MOUSEMOVE:
             //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
@@ -301,59 +310,103 @@ static void LeftMouseDownOperate(void)
 {
     int i, j;
     int objnum = RegisterP->ObjNum;
-    bool SelectFlag = 0;
+    bool SelectFlag = FALSE;
     //printf("objnum:%d\n", objnum);
     //int SelcectArray[MAXOBJ];
     //printf("TEST:LeftMouseDownOperate\n");
+    //SelectFlag = FALSE;
+    isOperating = TRUE;
     if (CheckRotate()) {
         isRotating = TRUE;
     } else {
-        isOperating = TRUE;
         for (i = 0; i < objnum; i++) {
             if (CheckMouse(RegisterP->RegisterObj[i])) {
                 //printf("TEST:here\n");
                 //SelcectArray[j] = i;
-                DrawWhat = RegisterP->RegisterObj[i]->DrawType;
-                RegisterP->ActiveOne = i;
-                if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
-                    RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
-                    RedNum--;
-                    RegisterP->ActiveOne = -1;
+                //DrawWhat = RegisterP->RegisterObj[i]->DrawType;
+                //RegisterP->ActiveOne = i;
+                if (RegisterP->ActiveOne == i) {
+                    isCacelSelect = TRUE;
                 } else {
-                    if (RedNum >= 1) {
+                    if (SelectNum >= 1) {
                         for (j = 0; j < objnum; j++) {
                             RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
                         }
                     }
                     RegisterP->RegisterObj[i]->color = SELECT_COLOR;
                     DrawRotatePoint(RegisterP->RegisterObj[i]);
-                    RedNum++;
+                    SelectNum++;
                     RegisterP->ActiveOne = i;
                 }
+                isMovingObj = TRUE;
+                /*if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
+                    RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+                    SelectNum--;
+                    RegisterP->ActiveOne = -1;
+                } else {
+                    if (SelectNum >= 1) {
+                        for (j = 0; j < objnum; j++) {
+                            RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+                        }
+                    }
+                    RegisterP->RegisterObj[i]->color = SELECT_COLOR;
+                    DrawRotatePoint(RegisterP->RegisterObj[i]);
+                    SelectNum++;
+                    RegisterP->ActiveOne = i;
+                }*/
                 RefreshAndDraw();
                 //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
-                SelectFlag = 1;
+                //SelectFlag = 1;
                 
                 //printf("TEST:here\n");
+                SelectFlag = TRUE;
                 break;
                 //j++;
             }
         }
+        if (!SelectFlag) {
+            for (j = 0; j < objnum; j++) {
+                RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+            }
+            RegisterP->ActiveOne = -1;
+            RefreshAndDraw();
+        }
         //printf("TEST:here\n");
-        if (!SelectFlag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
+        /*if (SelectNum == 0) {
             //printf("TEST:here\n");
             for (i = 0; i < objnum; i++) {
                 RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
             }
+            if (RegisterP->ActiveOne != -1) RegisterP->RegisterObj[RegisterP->ActiveOne]->color = SELECT_COLOR;
             RefreshAndDraw();
-        }
+        }*/
     }
 }
 
 static void LeftMouseUpOperate(void)
 {
+    //if (SelectNum == 0/*!SelectFlag*/) {
+        //printf("TEST:here\n");
+        /*for (i = 0; i < objnum; i++) {
+        RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+        }*/
+        /*if (RegisterP->ActiveOne != -1) {
+            RegisterP->RegisterObj[RegisterP->ActiveOne]->color = SELECT_COLOR;
+            RefreshAndDraw();
+        }*/
+    //}
+    //printf("TEST:%d, %d\n", isMouseDownMoving, isCacelSelect);
+    if (!isMouseDownMoving && isCacelSelect) { //cancel selecting this obj
+        //printf("TEST:%d\n", RegisterP->ActiveOne);
+        if (RegisterP->ActiveOne != -1) RegisterP->RegisterObj[RegisterP->ActiveOne]->color = DEFAULT_COLOR;
+        RefreshAndDraw();
+        SelectNum--;
+        RegisterP->ActiveOne = -1;
+    }
     isOperating = FALSE;
     isRotating = FALSE;
+    isCacelSelect = FALSE;
+    isMovingObj = FALSE;
 }
 
 static void LeftMouseMoveOperate(void)
@@ -363,12 +416,13 @@ static void LeftMouseMoveOperate(void)
     double y0 = PreviousPoint->y;
     double x1 = CurrentPoint->x;
     double y1 = CurrentPoint->y;
-
-    if (isOperating) {
+    //printf("TEST:%d, %d, %d\n",isMovingObj, isRotating, isMouseDown);
+    if (isMouseDown) isMouseDownMoving = TRUE;
+    if (isMovingObj && isMouseDown) {
         for (i = 0; i < RegisterP->ObjNum; i++) {
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
         }
-    } else if (isRotating) {
+    } else if (isRotating && isMouseDown) {
         rotate(x0, y0, x1, y1);
     }
 }
@@ -948,10 +1002,12 @@ void test(void)
 
 bool CheckRotate(void) 
 {
-    int i;
-    int objnum = RegisterP->ObjNum;
+    //int i;
+    //int objnum = RegisterP->ObjNum;
 
-    for (i = 0; i < objnum; i++) {
+    if (RegisterP->ActiveOne != -1 && InsideRotatePoint(RegisterP->RegisterObj[RegisterP->ActiveOne])) return TRUE;
+    else return FALSE;
+    /*for (i = 0; i < objnum; i++) {
         if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
             if (InsideRotatePoint(RegisterP->RegisterObj[i])) {
                 RegisterP->ActiveOne = i;
@@ -960,7 +1016,7 @@ bool CheckRotate(void)
             }
         }
     }
-    return FALSE;
+    return FALSE;*/
 }
 
 bool InsideRotatePoint(struct obj *Obj) 
