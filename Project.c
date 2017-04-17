@@ -90,7 +90,7 @@ struct RegisterADT {
     {0, 1, 0, 1},
     {1, 0, 1, 0}
 };*/
-const bool RectangleMatrix[] ={
+const bool RectangleMatrix[] = {
     0, 1, 0, 1,
     1, 0, 1, 0,
     0, 1, 0, 1,
@@ -114,6 +114,7 @@ static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
 static int SelectNum = 0;
 static double angle;
+int TestCount = 0;
 
 
 void KeyboardEventProcess(int key,int event);
@@ -170,6 +171,7 @@ void rotate(double x1, double y1, double x2, double y2);
 void RotatePolygon(void);
 void InitLine(void);
 void GetLineShape(void);
+void GetShape(void);
 
 void Main()
 {
@@ -300,7 +302,9 @@ static void LeftMouseMoveDraw(void)
     //printf("TEST:LeftMouseMoveDraw\n");
     if (isDrawing) {
         //SetPenColor();
+        //printf("TEST:here %d\n", TestCount++);
         GetShape();
+        //printf("TEST:here %d\n", TestCount++);
         RefreshAndDraw();
         //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
@@ -567,7 +571,7 @@ void RefreshAndDraw(void)
     RefreshDisplay();
 
     PenColor = GetPenColor();
-    temp = RegisterP->ActiveOne;
+    activeone = RegisterP->ActiveOne;
     for (i = 0; i < objnum; i++) {
         position = RegisterP->RegisterObj[i];
         SetPenColor(position->color);
@@ -604,7 +608,9 @@ void Register(void *objPt, int type)
     //printf("TEST: register num:%d\n", RegisterP->ObjNum);
     //printf("TEST: DrawType: %d\n", (RegisterP->RegisterObj)[(RegisterP->ObjNum)-1]->DrawType);
     RegisterP->ActiveOne = RegisterP->ObjNum;
+    //printf("TEST:activeone: %d\n", RegisterP->ActiveOne);
     RegisterP->ObjNum++;
+    //printf("TEST:here\n");
 }
 
 void InitRegister(void)
@@ -630,6 +636,7 @@ void InitRegister(void)
 
 void DrawTwoDhasEdge(void)
 {
+    //printf("TEST:DrawTwoDhasEdge\n");
     int i, j, pointnum;
     struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
     struct obj *Obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
@@ -1074,23 +1081,29 @@ void InitLine(void) // can be merged with InitRectangle()
     struct TwoDhasEdge *line = GetBlock(sizeof(struct TwoDhasEdge));
 
     Register(line, LINE);
+    //printf("TEST:here\n");
     line->PointNum = 2;
     (line->pointarray)[0] = GetBlock(sizeof(struct Point));
     (line->pointarray)[1] = GetBlock(sizeof(struct Point));
     (line->pointarray)[0]->x = CurrentPoint->x;
     (line->pointarray)[0]->y = CurrentPoint->y;
     line->RelationMatrix = LineMatrix;
+    //printf("TEST:here\n");
 }
 
 void GetShape(void)
 {
+    //printf("TEST:here\n");
     ChooseDrawWhat(PlaceHolder, GetLineShape, GetRectangleShape, PlaceHolder, PlaceHolder);
 }
 
 void GetLineShape()
 {
+    //printf("TEST:here\n");
+    //printf("TEST:%d\n", RegisterP->ActiveOne);
     struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
-
+    //printf("TEST:here\n");
     temp->pointarray[1]->x = CurrentPoint->x;
     temp->pointarray[1]->y = CurrentPoint->y;
+    //printf("TEST:here %d\n", TestCount++);
 }
