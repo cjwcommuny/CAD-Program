@@ -25,6 +25,7 @@
 #define POINT_R 0.05
 #define ROTATE_POINT_RANGE 0.1
 #define PI 3.14159
+#define LINE_ROTATE_POINT_DISTANCE 0.5
 typedef enum {
     CURRENT_POINT_TIMER = 1
 } timerID;
@@ -159,7 +160,7 @@ void PlaceHolder(void);
 void MoveObj(struct obj *Obj, double dx, double dy);
 void DrawRotatePoint(struct obj *Obj);
 void CreateRotatePointForConvexPolygon(struct obj *Obj);
-void DrawRotatePointForConvexPolygon(struct obj *Obj);
+void DrawRotatePoint2(struct obj *Obj);
 //void CreateRotatePointForRectangle(struct obj *Obj);
 void DrawDottedLine(struct Point *point1, struct Point *point2);
 void DrawPoint(double x, double y);
@@ -172,6 +173,8 @@ void RotatePolygon(void);
 void InitLine(void);
 void GetLineShape(void);
 void GetShape(void);
+void CreateRotatePoint(struct obj *Obj);
+void CreateRotatePointForLine(struct obj* Obj);
 
 void Main()
 {
@@ -183,6 +186,8 @@ void Main()
     PreviousPoint = GetBlock(sizeof(struct Point));
     PreviousPoint->x = 0;
     PreviousPoint->y = 0;
+    CurrentPoint->x = 0;
+    CurrentPoint->y = 0;
     //startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
     InitRegister();
 
@@ -622,6 +627,7 @@ void InitRegister(void)
         (RegisterP->RegisterObj)[i] = NULL;//GetBlock(sizeof(struct obj));
     }
     RegisterP->ObjNum = 0;
+    RegisterP->ActiveOne = -1;
 }
 
 /*struct obj *FindActive(void)
@@ -659,7 +665,8 @@ void DrawTwoDhasEdge(void)
     }
     Obj->CenterPoint->x /= obj->PointNum;
     Obj->CenterPoint->y /= obj->PointNum;
-    CreateRotatePointForConvexPolygon((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
+    CreateRotatePoint((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
+    //CreateRotatePointForConvexPolygon((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
     //printf("TEST:center point:%f, %f\n", obj->CenterPoint->x, obj->CenterPoint->y);
     //SetPenColor(PenColor);
 }
@@ -894,9 +901,10 @@ void DrawRotatePoint(struct obj *Obj)
 {
     switch (Obj->DrawType) {
         case LINE:
+            DrawRotatePoint2(Obj);
             break;
         case RECTANGLE:
-            DrawRotatePointForConvexPolygon(Obj);
+            DrawRotatePoint2(Obj);
             break;
         case ELLIPSE:
             break;
@@ -914,7 +922,7 @@ void CreateRotatePointForConvexPolygon(struct obj *Obj)
     Obj->RotatePoint->y = 1.5*(MiddlePoint->y - Obj->CenterPoint->y) + Obj->CenterPoint->y;
 }
 
-void DrawRotatePointForConvexPolygon(struct obj *Obj)
+void DrawRotatePoint2(struct obj *Obj)
 {
     string PenColor;
     //printf("TEST:here\n");
@@ -1106,4 +1114,34 @@ void GetLineShape()
     temp->pointarray[1]->x = CurrentPoint->x;
     temp->pointarray[1]->y = CurrentPoint->y;
     //printf("TEST:here %d\n", TestCount++);
+}
+
+void CreateRotatePoint(struct obj *Obj)
+{
+    switch (Obj->DrawType) {
+        case TEXT:
+            break;
+        case LINE:
+            CreateRotatePointForLine(Obj);
+            break;
+        case RECTANGLE:
+            CreateRotatePointForConvexPolygon(Obj);
+            break;
+        case ELLIPSE:
+            break;
+        case LOCUS:
+            break;
+    }
+}
+
+void CreateRotatePointForLine(struct obj* Obj)
+{
+    double x0 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[0]->x;
+    double y0 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[0]->y;
+    double x1 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[1]->x;
+    double y1 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[1]->y;
+    double cx = Obj->CenterPoint->x;
+    double cy = Obj->CenterPoint->y;
+    Obj->RotatePoint->x = LINE_ROTATE_POINT_DISTANCE / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cx;
+    Obj->RotatePoint->y = LINE_ROTATE_POINT_DISTANCE / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cy;
 }
