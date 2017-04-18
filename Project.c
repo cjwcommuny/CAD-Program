@@ -25,6 +25,7 @@
 #define POINT_R 0.05
 #define ROTATE_POINT_RANGE 0.1
 #define PI 3.14159
+#define LINE_ROTATE_POINT_DISTANCE 0.5
 typedef enum {
     CURRENT_POINT_TIMER = 1
 } timerID;
@@ -90,21 +91,32 @@ struct RegisterADT {
     {0, 1, 0, 1},
     {1, 0, 1, 0}
 };*/
-const bool RectangleMatrix[] ={
+const bool RectangleMatrix[] = {
     0, 1, 0, 1,
     1, 0, 1, 0,
     0, 1, 0, 1,
     1, 0, 1, 0
 };
+const bool LineMatrix[] = {
+    0, 1,
+    1, 0
+};
 static int mode; 
-static int DrawWhat; 
+static int DrawWhat;
+static bool isMouseDown = FALSE;
+static bool isMouseDownMoving = FALSE;
 static bool isDrawing = FALSE;
 static bool isOperating = FALSE;
 static bool isRotating = FALSE;
+static bool isMovingObj = FALSE;
+static bool isCacelSelect = FALSE;
+//static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
-static int RedNum = 0;
+static int SelectNum = 0;
 static double angle;
+int TestCount = 0;
+
 
 void KeyboardEventProcess(int key,int event);
 void CharEventProcess(char c);
@@ -115,11 +127,11 @@ void GetCurrentPoint(void);
 static void ChooseButton(void (*left1)(void), void (*left2)(void)/*, 
                          void (*right1)(void), void (*right2)(void), 
                          void (*middle1)(void), void (*middle2)(void)*/, int button);
-void ChooseDrawWhat(/*void (*text)(void), 
-                    void (*line)(void),*/
-                    void (*rectangle)(void)/*, 
+void ChooseDrawWhat(void (*text)(void), 
+                    void (*line)(void),
+                    void (*rectangle)(void), 
                     void (*ellipse)(void), 
-                    void (*locus)(void)*/);
+                    void (*locus)(void));
 static void ChooseMode(void (*draw)(void), void (*operate)(void));
 static void LeftMouseDownDraw(void);
 static void LeftMouseUpDraw(void);
@@ -133,11 +145,11 @@ void Register(void *objPt, int type);
 //struct obj *FindActive(void)
 void DrawTwoDhasEdge(void);
 void DrawLineByPoint(struct Point *point1, struct Point *point2);
+//void RefreshAndDraw(void);
 void RefreshAndDraw(void);
-void RefreshAndDraw2(void);
 void InitRectangle(void);
 void DrawRectangle(double x, double y, double width, double height);
-void DrawRectangle2(void);
+void GetRectangleShape(void);
 void UpdateRectangle(void);
 bool CheckMouse(struct obj *Obj);
 bool CheckConvexPolygon(struct obj *Obj);
@@ -148,7 +160,7 @@ void PlaceHolder(void);
 void MoveObj(struct obj *Obj, double dx, double dy);
 void DrawRotatePoint(struct obj *Obj);
 void CreateRotatePointForConvexPolygon(struct obj *Obj);
-void DrawRotatePointForConvexPolygon(struct obj *Obj);
+void DrawRotatePoint2(struct obj *Obj);
 //void CreateRotatePointForRectangle(struct obj *Obj);
 void DrawDottedLine(struct Point *point1, struct Point *point2);
 void DrawPoint(double x, double y);
@@ -158,7 +170,11 @@ bool CheckRotate(void);
 bool InsideRotatePoint(struct obj *Obj);
 void rotate(double x1, double y1, double x2, double y2);
 void RotatePolygon(void);
-
+void InitLine(void);
+void GetLineShape(void);
+void GetShape(void);
+void CreateRotatePoint(struct obj *Obj);
+void CreateRotatePointForLine(struct obj* Obj);
 
 void Main()
 {
@@ -170,6 +186,8 @@ void Main()
     PreviousPoint = GetBlock(sizeof(struct Point));
     PreviousPoint->x = 0;
     PreviousPoint->y = 0;
+    CurrentPoint->x = 0;
+    CurrentPoint->y = 0;
     //startTimer(CURRENT_POINT_TIMER, CURRENT_POINT_MSECONDS);
     InitRegister();
 
@@ -222,10 +240,13 @@ void MouseEventProcess(int x, int y, int button, int event)
 
     switch (event) {
         case BUTTON_DOWN:
+            isMouseDown = TRUE;
             ChooseButton(LeftMouseDownDraw, LeftMouseDownOperate/*,,,,*/, button);
             break;
         case BUTTON_UP:
+            isMouseDown = FALSE;
             ChooseButton(LeftMouseUpDraw, LeftMouseUpOperate/*,,,,*/, button);
+            isMouseDownMoving = FALSE;
             break;
         case MOUSEMOVE:
             //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
@@ -269,7 +290,7 @@ static void LeftMouseDownDraw(void)
 {
     //printf("TEST:LeftMouseDownDraw\n");
     isDrawing = TRUE;
-    ChooseDrawWhat(/*,,*/InitRectangle/*,,*/);
+    ChooseDrawWhat(PlaceHolder, InitLine, InitRectangle, PlaceHolder, PlaceHolder);
     //printf("TEST:LeftMouseDownDraw over\n");
 }
 
@@ -286,6 +307,9 @@ static void LeftMouseMoveDraw(void)
     //printf("TEST:LeftMouseMoveDraw\n");
     if (isDrawing) {
         //SetPenColor();
+        //printf("TEST:here %d\n", TestCount++);
+        GetShape();
+        //printf("TEST:here %d\n", TestCount++);
         RefreshAndDraw();
         //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
@@ -295,59 +319,103 @@ static void LeftMouseDownOperate(void)
 {
     int i, j;
     int objnum = RegisterP->ObjNum;
-    bool SelectFlag = 0;
+    bool SelectFlag = FALSE;
     //printf("objnum:%d\n", objnum);
     //int SelcectArray[MAXOBJ];
     //printf("TEST:LeftMouseDownOperate\n");
+    //SelectFlag = FALSE;
+    isOperating = TRUE;
     if (CheckRotate()) {
         isRotating = TRUE;
     } else {
-        isOperating = TRUE;
         for (i = 0; i < objnum; i++) {
             if (CheckMouse(RegisterP->RegisterObj[i])) {
                 //printf("TEST:here\n");
                 //SelcectArray[j] = i;
-                DrawWhat = RegisterP->RegisterObj[i]->DrawType;
-                RegisterP->ActiveOne = i;
-                if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
-                    RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
-                    RedNum--;
-                    RegisterP->ActiveOne = -1;
+                //DrawWhat = RegisterP->RegisterObj[i]->DrawType;
+                //RegisterP->ActiveOne = i;
+                if (RegisterP->ActiveOne == i) {
+                    isCacelSelect = TRUE;
                 } else {
-                    if (RedNum >= 1) {
+                    if (SelectNum >= 1) {
                         for (j = 0; j < objnum; j++) {
                             RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
                         }
                     }
                     RegisterP->RegisterObj[i]->color = SELECT_COLOR;
                     DrawRotatePoint(RegisterP->RegisterObj[i]);
-                    RedNum++;
+                    SelectNum++;
                     RegisterP->ActiveOne = i;
                 }
-                RefreshAndDraw2();
+                isMovingObj = TRUE;
+                /*if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
+                    RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+                    SelectNum--;
+                    RegisterP->ActiveOne = -1;
+                } else {
+                    if (SelectNum >= 1) {
+                        for (j = 0; j < objnum; j++) {
+                            RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+                        }
+                    }
+                    RegisterP->RegisterObj[i]->color = SELECT_COLOR;
+                    DrawRotatePoint(RegisterP->RegisterObj[i]);
+                    SelectNum++;
+                    RegisterP->ActiveOne = i;
+                }*/
+                RefreshAndDraw();
                 //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
-                SelectFlag = 1;
+                //SelectFlag = 1;
                 
                 //printf("TEST:here\n");
+                SelectFlag = TRUE;
                 break;
                 //j++;
             }
         }
+        if (!SelectFlag) {
+            for (j = 0; j < objnum; j++) {
+                RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
+            }
+            RegisterP->ActiveOne = -1;
+            RefreshAndDraw();
+        }
         //printf("TEST:here\n");
-        if (!SelectFlag/*&& RegisterP->RegisterObj[i]->color == SELECT_COLOR*/) {
+        /*if (SelectNum == 0) {
             //printf("TEST:here\n");
             for (i = 0; i < objnum; i++) {
                 RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
             }
-            RefreshAndDraw2();
-        }
+            if (RegisterP->ActiveOne != -1) RegisterP->RegisterObj[RegisterP->ActiveOne]->color = SELECT_COLOR;
+            RefreshAndDraw();
+        }*/
     }
 }
 
 static void LeftMouseUpOperate(void)
 {
+    //if (SelectNum == 0/*!SelectFlag*/) {
+        //printf("TEST:here\n");
+        /*for (i = 0; i < objnum; i++) {
+        RegisterP->RegisterObj[i]->color = DEFAULT_COLOR;
+        }*/
+        /*if (RegisterP->ActiveOne != -1) {
+            RegisterP->RegisterObj[RegisterP->ActiveOne]->color = SELECT_COLOR;
+            RefreshAndDraw();
+        }*/
+    //}
+    //printf("TEST:%d, %d\n", isMouseDownMoving, isCacelSelect);
+    if (!isMouseDownMoving && isCacelSelect) { //cancel selecting this obj
+        //printf("TEST:%d\n", RegisterP->ActiveOne);
+        if (RegisterP->ActiveOne != -1) RegisterP->RegisterObj[RegisterP->ActiveOne]->color = DEFAULT_COLOR;
+        RefreshAndDraw();
+        SelectNum--;
+        RegisterP->ActiveOne = -1;
+    }
     isOperating = FALSE;
     isRotating = FALSE;
+    isCacelSelect = FALSE;
+    isMovingObj = FALSE;
 }
 
 static void LeftMouseMoveOperate(void)
@@ -357,12 +425,13 @@ static void LeftMouseMoveOperate(void)
     double y0 = PreviousPoint->y;
     double x1 = CurrentPoint->x;
     double y1 = CurrentPoint->y;
-
-    if (isOperating) {
+    //printf("TEST:%d, %d, %d\n",isMovingObj, isRotating, isMouseDown);
+    if (isMouseDown) isMouseDownMoving = TRUE;
+    if (isMovingObj && isMouseDown) {
         for (i = 0; i < RegisterP->ObjNum; i++) {
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
         }
-    } else if (isRotating) {
+    } else if (isRotating && isMouseDown) {
         rotate(x0, y0, x1, y1);
     }
 }
@@ -393,33 +462,36 @@ void MoveObj(struct obj *Obj, double dx, double dy)
         case ELLIPSE:
             break;
     }
-    RefreshAndDraw2();
+    RefreshAndDraw();
 }
 
-void ChooseDrawWhat(/*void (*text)(void), 
-                    void (*line)(void),*/
-                    void (*rectangle)(void)/*, 
+void ChooseDrawWhat(void (*text)(void), 
+                    void (*line)(void),
+                    void (*rectangle)(void), 
                     void (*ellipse)(void), 
-                    void (*locus)(void)*/)
+                    void (*locus)(void))
 {
     //printf("TEST:ChooseDrawWhat\n");
     switch (DrawWhat) {
         case NO_TYPE:
             break;
         case TEXT:
+            PlaceHolder();
             //text();
             break;
         case LINE:
-            //line();
+            line();
             break;
         case RECTANGLE:
             //printf("TEST:case:RECTANGLE\n");
             rectangle();
             break;
         case ELLIPSE:
+            PlaceHolder();
             //ellipse();
             break;
         case LOCUS:
+            PlaceHolder();
             //locus();
             break;
     }
@@ -473,7 +545,7 @@ void RefreshDisplay(void)
     SetEraseMode(FALSE);
 }
 
-void RefreshAndDraw(void)
+/*void RefreshAndDraw(void)
 {
     int i , objnum = RegisterP->ObjNum, temp;
     struct obj *position;
@@ -487,14 +559,14 @@ void RefreshAndDraw(void)
         RegisterP->ActiveOne = i;
         if (i == temp) {
             //printf("TEST: activeposition:%d\n", i);
-            ChooseDrawWhat(/*,,*/DrawRectangle2/*,,*/);
+            ChooseDrawWhat(PlaceHolder, GetLineShape, GetRectangleShape, PlaceHolder, PlaceHolder);
         } else {
-            ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+            ChooseDrawWhat(PlaceHolder, DrawTwoDhasEdge, DrawTwoDhasEdge, PlaceHolder, PlaceHolder);
         }
     }
-}
+}*/
 
-void RefreshAndDraw2(void)
+void RefreshAndDraw(void)
 {
     int i , objnum = RegisterP->ObjNum, temp;
     struct obj *position;
@@ -504,7 +576,7 @@ void RefreshAndDraw2(void)
     RefreshDisplay();
 
     PenColor = GetPenColor();
-    temp = RegisterP->ActiveOne;
+    activeone = RegisterP->ActiveOne;
     for (i = 0; i < objnum; i++) {
         position = RegisterP->RegisterObj[i];
         SetPenColor(position->color);
@@ -513,7 +585,7 @@ void RefreshAndDraw2(void)
         if (position->color == SELECT_COLOR) {
             DrawRotatePoint(position);
         }
-        ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
+        ChooseDrawWhat(PlaceHolder, DrawTwoDhasEdge, DrawTwoDhasEdge, PlaceHolder, PlaceHolder);
     }
     SetPenColor(PenColor);
     RegisterP->ActiveOne = activeone;
@@ -541,7 +613,9 @@ void Register(void *objPt, int type)
     //printf("TEST: register num:%d\n", RegisterP->ObjNum);
     //printf("TEST: DrawType: %d\n", (RegisterP->RegisterObj)[(RegisterP->ObjNum)-1]->DrawType);
     RegisterP->ActiveOne = RegisterP->ObjNum;
+    //printf("TEST:activeone: %d\n", RegisterP->ActiveOne);
     RegisterP->ObjNum++;
+    //printf("TEST:here\n");
 }
 
 void InitRegister(void)
@@ -553,6 +627,7 @@ void InitRegister(void)
         (RegisterP->RegisterObj)[i] = NULL;//GetBlock(sizeof(struct obj));
     }
     RegisterP->ObjNum = 0;
+    RegisterP->ActiveOne = -1;
 }
 
 /*struct obj *FindActive(void)
@@ -567,6 +642,7 @@ void InitRegister(void)
 
 void DrawTwoDhasEdge(void)
 {
+    //printf("TEST:DrawTwoDhasEdge\n");
     int i, j, pointnum;
     struct TwoDhasEdge *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
     struct obj *Obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
@@ -589,7 +665,8 @@ void DrawTwoDhasEdge(void)
     }
     Obj->CenterPoint->x /= obj->PointNum;
     Obj->CenterPoint->y /= obj->PointNum;
-    CreateRotatePointForConvexPolygon((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
+    CreateRotatePoint((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
+    //CreateRotatePointForConvexPolygon((RegisterP->RegisterObj)[RegisterP->ActiveOne]);
     //printf("TEST:center point:%f, %f\n", obj->CenterPoint->x, obj->CenterPoint->y);
     //SetPenColor(PenColor);
 }
@@ -610,19 +687,27 @@ void DrawRectangle(double x, double y, double width, double height)
     DrawLine(0, -height);
 }
 
-void DrawRectangle2(void)
+void GetRectangleShape(void)
 {
     //struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    //printf("TEST: pointnum: %d\n", temp->PointNum);
+    temp->pointarray[2]->x = CurrentPoint->x;
+    temp->pointarray[2]->y = CurrentPoint->y;
+    temp->pointarray[1]->x = temp->pointarray[2]->x;
+    temp->pointarray[1]->y = temp->pointarray[0]->y;
+    temp->pointarray[3]->x = temp->pointarray[0]->x;
+    temp->pointarray[3]->y = temp->pointarray[2]->y;
     //printf("TEST: pointnum:%d\n", ((struct TwoDhasEdge *)((RegisterP->RegisterObj[RegisterP->ActiveOne])->objPointer))->PointNum);
-    UpdateRectangle();
-    DrawTwoDhasEdge();
+    //UpdateRectangle();
+    //DrawTwoDhasEdge();
     //printf("TEST:\n");
     //TEST:getchar();
     //printf("Rectangle: 0: %f, %f, 1: %f, %f, 2: %f, %f, 3: %f, %f\n", temp->pointarray[0]->x, temp->pointarray[0]->y, temp->pointarray[1]->x, temp->pointarray[1]->y, 
     //temp->pointarray[2]->x, temp->pointarray[2]->y, temp->pointarray[3]->x, temp->pointarray[3]->y);
 }
 
-void UpdateRectangle(void)
+/*void UpdateRectangle(void)
 {
     struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
     //printf("TEST: pointnum: %d\n", temp->PointNum);
@@ -632,7 +717,7 @@ void UpdateRectangle(void)
     temp->pointarray[1]->y = temp->pointarray[0]->y;
     temp->pointarray[3]->x = temp->pointarray[0]->x;
     temp->pointarray[3]->y = temp->pointarray[2]->y;
-}
+}*/
 
 bool CheckMouse(struct obj *Obj)
 {
@@ -816,9 +901,10 @@ void DrawRotatePoint(struct obj *Obj)
 {
     switch (Obj->DrawType) {
         case LINE:
+            DrawRotatePoint2(Obj);
             break;
         case RECTANGLE:
-            DrawRotatePointForConvexPolygon(Obj);
+            DrawRotatePoint2(Obj);
             break;
         case ELLIPSE:
             break;
@@ -836,7 +922,7 @@ void CreateRotatePointForConvexPolygon(struct obj *Obj)
     Obj->RotatePoint->y = 1.5*(MiddlePoint->y - Obj->CenterPoint->y) + Obj->CenterPoint->y;
 }
 
-void DrawRotatePointForConvexPolygon(struct obj *Obj)
+void DrawRotatePoint2(struct obj *Obj)
 {
     string PenColor;
     //printf("TEST:here\n");
@@ -931,10 +1017,12 @@ void test(void)
 
 bool CheckRotate(void) 
 {
-    int i;
-    int objnum = RegisterP->ObjNum;
+    //int i;
+    //int objnum = RegisterP->ObjNum;
 
-    for (i = 0; i < objnum; i++) {
+    if (RegisterP->ActiveOne != -1 && InsideRotatePoint(RegisterP->RegisterObj[RegisterP->ActiveOne])) return TRUE;
+    else return FALSE;
+    /*for (i = 0; i < objnum; i++) {
         if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
             if (InsideRotatePoint(RegisterP->RegisterObj[i])) {
                 RegisterP->ActiveOne = i;
@@ -943,7 +1031,7 @@ bool CheckRotate(void)
             }
         }
     }
-    return FALSE;
+    return FALSE;*/
 }
 
 bool InsideRotatePoint(struct obj *Obj) 
@@ -975,8 +1063,8 @@ void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
     if (x2 - xc < 0) {
         angle += PI;
     }
-    ChooseDrawWhat(/*,,*/RotatePolygon/*,,*/);
-    RefreshAndDraw2();
+    ChooseDrawWhat(PlaceHolder, PlaceHolder, RotatePolygon, PlaceHolder, PlaceHolder);
+    RefreshAndDraw();
 }
 
 void RotatePolygon(void) //also works when obj is TwoDhasEdge
@@ -994,4 +1082,66 @@ void RotatePolygon(void) //also works when obj is TwoDhasEdge
         Polygon->pointarray[i]->x = (tempX - xc) * cos(angle) + (yc - tempY) * sin(angle) + xc;
         Polygon->pointarray[i]->y = (tempX - xc) * sin(angle) + (tempY - yc) * cos(angle) + yc;
     }
+}
+
+void InitLine(void) // can be merged with InitRectangle()
+{
+    struct TwoDhasEdge *line = GetBlock(sizeof(struct TwoDhasEdge));
+
+    Register(line, LINE);
+    //printf("TEST:here\n");
+    line->PointNum = 2;
+    (line->pointarray)[0] = GetBlock(sizeof(struct Point));
+    (line->pointarray)[1] = GetBlock(sizeof(struct Point));
+    (line->pointarray)[0]->x = CurrentPoint->x;
+    (line->pointarray)[0]->y = CurrentPoint->y;
+    line->RelationMatrix = LineMatrix;
+    //printf("TEST:here\n");
+}
+
+void GetShape(void)
+{
+    //printf("TEST:here\n");
+    ChooseDrawWhat(PlaceHolder, GetLineShape, GetRectangleShape, PlaceHolder, PlaceHolder);
+}
+
+void GetLineShape()
+{
+    //printf("TEST:here\n");
+    //printf("TEST:%d\n", RegisterP->ActiveOne);
+    struct TwoDhasEdge *temp = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    //printf("TEST:here\n");
+    temp->pointarray[1]->x = CurrentPoint->x;
+    temp->pointarray[1]->y = CurrentPoint->y;
+    //printf("TEST:here %d\n", TestCount++);
+}
+
+void CreateRotatePoint(struct obj *Obj)
+{
+    switch (Obj->DrawType) {
+        case TEXT:
+            break;
+        case LINE:
+            CreateRotatePointForLine(Obj);
+            break;
+        case RECTANGLE:
+            CreateRotatePointForConvexPolygon(Obj);
+            break;
+        case ELLIPSE:
+            break;
+        case LOCUS:
+            break;
+    }
+}
+
+void CreateRotatePointForLine(struct obj* Obj)
+{
+    double x0 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[0]->x;
+    double y0 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[0]->y;
+    double x1 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[1]->x;
+    double y1 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[1]->y;
+    double cx = Obj->CenterPoint->x;
+    double cy = Obj->CenterPoint->y;
+    Obj->RotatePoint->x = LINE_ROTATE_POINT_DISTANCE / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cx;
+    Obj->RotatePoint->y = LINE_ROTATE_POINT_DISTANCE / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cy;
 }
