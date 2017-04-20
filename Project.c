@@ -21,12 +21,13 @@
 #define DEFAULT_COLOR "Black"
 #define SELECT_COLOR "Red"
 #define POINT_COLOR "Magenta"
-#define DL 0.05
+#define DL 0.04
 #define POINT_R 0.05
 #define ROTATE_POINT_RANGE 0.1
 #define PI 3.14159
 #define LINE_ROTATE_POINT_DISTANCE 0.5
 #define LINE_SELECT_WIDTH 0.2
+
 typedef enum {
     CURRENT_POINT_TIMER = 1
 } timerID;
@@ -179,6 +180,8 @@ void CreateRotatePoint(struct obj *Obj);
 void CreateRotatePointForLine(struct obj* Obj);
 void MoveTwoDhasEdge(struct obj *Obj, double dx, double dy);
 bool CheckInsidePolygon(struct Point **select_point, struct Point *ReferencePoint, bool *RelationMatrix, int PointNum);
+void DeleteObj(void);
+void RemoveElement(void **array, int index, int length);
 
 void Main()
 {
@@ -207,11 +210,18 @@ void KeyboardEventProcess(int key,int event)
         case KEY_DOWN:
             switch (key) {
                 case VK_F1:
+                    if (RegisterP->ActiveOne != -1) {
+                        RegisterP->RegisterObj[RegisterP->ActiveOne]->color = DEFAULT_COLOR;
+                        RegisterP->ActiveOne = -1;
+                    }
                     SetMode();
                     break;
                 case VK_F2:
                     break;
                 case VK_F3:
+                    break;
+                case VK_DELETE:
+                    DeleteObj();
                     break;
             }
             break;
@@ -254,6 +264,7 @@ void MouseEventProcess(int x, int y, int button, int event)
             break;
         case MOUSEMOVE:
             //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
+            if (isMouseDown) isMouseDownMoving = TRUE;
             ChooseMode(LeftMouseMoveDraw, LeftMouseMoveOperate);
             break;
     }
@@ -301,6 +312,8 @@ static void LeftMouseDownDraw(void)
 static void LeftMouseUpDraw(void)
 {
     //printf("TEST:LeftMouseUpDraw\n");
+    if (!isMouseDownMoving) DeleteObj();
+    printf("TEST:objnum:%d\n", RegisterP->ObjNum);
     isDrawing = FALSE;
     RegisterP->ActiveOne = -1;
     //DrawWhat = NO_TYPE;
@@ -430,7 +443,7 @@ static void LeftMouseMoveOperate(void)
     double x1 = CurrentPoint->x;
     double y1 = CurrentPoint->y;
     //printf("TEST:%d, %d, %d\n",isMovingObj, isRotating, isMouseDown);
-    if (isMouseDown) isMouseDownMoving = TRUE;
+    //if (isMouseDown) isMouseDownMoving = TRUE;
     if (isMovingObj && isMouseDown) {
         for (i = 0; i < RegisterP->ObjNum; i++) {
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
@@ -591,7 +604,7 @@ void RefreshAndDraw(void)
     RefreshDisplay();
 
     PenColor = GetPenColor();
-    activeone = RegisterP->ActiveOne;
+    //if (activeone = RegisterP->ActiveOne == -1) return;
     for (i = 0; i < objnum; i++) {
         position = RegisterP->RegisterObj[i];
         SetPenColor(position->color);
@@ -942,6 +955,7 @@ void SetMode(void)
 {
     int input;
 
+    RefreshAndDraw();
     InitConsole();
     printf("Which mode do you want? Choose the index from below.\n");
     printf("1: Draw object\n2: Type text\n3: Operate object\n");
@@ -1265,4 +1279,23 @@ void CreateRotatePointForLine(struct obj* Obj)
     else i = 1;
     Obj->RotatePoint->x = i * LINE_ROTATE_POINT_DISTANCE * fabs(y1-y0) / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cx;
     Obj->RotatePoint->y = cy - (Obj->RotatePoint->x - cx) * (x1 - x0) / (y1 - y0); //LINE_ROTATE_POINT_DISTANCE * fabs(x1-x0) / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cy;
+}
+
+void DeleteObj(void)
+{
+    if (RegisterP->ActiveOne != -1) {
+        RemoveElement(RegisterP->RegisterObj, RegisterP->ActiveOne, RegisterP->ObjNum);
+        RegisterP->ObjNum--;
+        RegisterP->ActiveOne = -1;
+    }
+    RefreshAndDraw();
+}
+
+void RemoveElement(void **array, int index, int length)
+{
+    int i;
+
+    for (i = index; i < length-1; i++) {
+        array[i] = array[i+1];
+    }
 }
