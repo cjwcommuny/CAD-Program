@@ -26,6 +26,7 @@
 #define ROTATE_POINT_RANGE 0.1
 #define PI 3.14159
 #define LINE_ROTATE_POINT_DISTANCE 0.5
+#define LINE_SELECT_WIDTH 0.2
 typedef enum {
     CURRENT_POINT_TIMER = 1
 } timerID;
@@ -152,6 +153,7 @@ void DrawRectangle(double x, double y, double width, double height);
 void GetRectangleShape(void);
 void UpdateRectangle(void);
 bool CheckMouse(struct obj *Obj);
+bool CheckLine(struct obj *Obj);
 bool CheckConvexPolygon(struct obj *Obj);
 bool CompareArray(int *array1, int *array2, int length);
 void SetMode(void);
@@ -175,6 +177,8 @@ void GetLineShape(void);
 void GetShape(void);
 void CreateRotatePoint(struct obj *Obj);
 void CreateRotatePointForLine(struct obj* Obj);
+void MoveTwoDhasEdge(struct obj *Obj, double dx, double dy);
+bool CheckInsidePolygon(struct Point **select_point, struct Point *ReferencePoint, bool *RelationMatrix, int PointNum);
 
 void Main()
 {
@@ -436,24 +440,35 @@ static void LeftMouseMoveOperate(void)
     }
 }
 
-void MoveObj(struct obj *Obj, double dx, double dy)
+void MoveTwoDhasEdge(struct obj *Obj, double dx, double dy)
 {
     int i;
+
+    for (i = 0; i < ((struct TwoDhasEdge *) Obj->objPointer)->PointNum; i++) {
+        ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x += dx;
+        ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y += dy;
+    }
+}
+
+void MoveObj(struct obj *Obj, double dx, double dy)
+{
     //printf("TEST:dx, dy = %f, %f", dx, dy);
     switch (Obj->DrawType) {
         case TEXT:
             break;
         case LINE:
+            MoveTwoDhasEdge(Obj, dx, dy);
             break;
         case RECTANGLE:
             /*for (i = 0; i <4; i++) {
                 printf("x0, y0 = %f, %f\n", ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x, 
                                             ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y);
             }*/
-            for (i = 0; i < ((struct TwoDhasEdge *) Obj->objPointer)->PointNum; i++) {
+            MoveTwoDhasEdge(Obj, dx, dy);
+            /*for (i = 0; i < ((struct TwoDhasEdge *) Obj->objPointer)->PointNum; i++) {
                 ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x += dx;
                 ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y += dy;
-            }
+            }*/
             /*for (i = 0; i <4; i++) {
                 printf("x1, y1 = %f, %f\n", ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->x, 
                                             ((struct TwoDhasEdge *) Obj->objPointer)->pointarray[i]->y);
@@ -726,7 +741,7 @@ bool CheckMouse(struct obj *Obj)
         case TEXT:
             break;
         case LINE:
-            break;
+            return CheckLine(Obj);
         case RECTANGLE:
             return CheckConvexPolygon(Obj);
         case ELLIPSE:
@@ -736,20 +751,56 @@ bool CheckMouse(struct obj *Obj)
     }
 }
 
-bool CheckConvexPolygon(struct obj *Obj)
+bool CheckLine(struct obj *Obj)
 {
-    int i, j, k = 0;
+    int i;
+    struct TwoDhasEdge *line = Obj->objPointer;
     double x = CurrentPoint->x;
     double y = CurrentPoint->y;
-    struct TwoDhasEdge *polygon = Obj->objPointer;
+    double x0 = line->pointarray[0]->x;
+    double y0 = line->pointarray[0]->y;
+    double x1 = line->pointarray[1]->x;
+    double y1 = line->pointarray[1]->y;
     double cx = Obj->CenterPoint->x;
     double cy = Obj->CenterPoint->y;
-    int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //error:beyond array
-    int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int pointnum = polygon->PointNum;
+    struct Point * select_point[4];
+    double X1, X2, X3, X4, Y1, Y2, Y3, Y4;
+    bool result;
+    double temp = LINE_SELECT_WIDTH /2 / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2));
+    //double  = LINE_SELECT_WIDTH /2 * fabs(y1-y0) / sqrt(pow(y1-y0, 2);
+    for (i = 0; i < 4; i++) {
+        select_point[i] = GetBlock(sizeof(struct Point));
+    }
+    select_point[0]->x = temp * fabs(y1-y0) + x0;
+    select_point[0]->y = y0 - (select_point[0]->x - x0) * (x1 - x0) / (y1 - y0);//temp * fabs(x1-x0) + y0;
+    select_point[1]->x = x0 - temp * fabs(y1-y0);//select_point[0]->x - 2 * x0;
+    select_point[1]->y = y0 - (select_point[1]->x - x0) * (x1 - x0) / (y1 - y0);
+    
+    select_point[2]->x = x1 - temp * fabs(y1-y0);
+    select_point[2]->y = y1 - (select_point[2]->x - x1) * (x1 - x0) / (y1 - y0);//temp * fabs(x1-x0) - y1;
+    select_point[3]->x = temp * fabs(y1-y0) + x1;//select_point[2]->x + 2 * x1;
+    select_point[3]->y = y1 - (select_point[3]->x - x1) * (x1 - x0) / (y1 - y0);//select_point[2]->y + 2 * y1;
+    result = CheckInsidePolygon(select_point, Obj->CenterPoint, RectangleMatrix, 4);
+    for (i = 0; i < 4; i++) {
+         free(select_point[i]);
+    }
+    return result;
+}
+
+bool CheckConvexPolygon(struct obj *Obj)
+{
+    //int i, j, k = 0;
+    //double x = CurrentPoint->x;
+    //double y = CurrentPoint->y;
+    struct TwoDhasEdge *polygon = Obj->objPointer;
+    //double cx = Obj->CenterPoint->x;
+    //double cy = Obj->CenterPoint->y;
+    //int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; 
+    //int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    //int pointnum = polygon->PointNum;
     //printf("TEST:centerpoint: %f, %f\n", cx, cy);
     //printf("TEST:CheckConvexPolygon\n");
-    for (i = 0; i < polygon->PointNum; i++) {
+    /*for (i = 0; i < polygon->PointNum; i++) {
         //printf("TEST:loop-\n");
         for (j = i; j < polygon->PointNum; j++) {
             //printf("TEST:loop0\n");
@@ -797,7 +848,7 @@ bool CheckConvexPolygon(struct obj *Obj)
                 }
             }
         }
-    }
+    }*/
     /*printf("isRegion:\n");
     for (i = 0; i < sizeof(isRegion)/sizeof(isRegion[0]); i++) {
         printf("%d ", isRegion[i]);
@@ -809,6 +860,67 @@ bool CheckConvexPolygon(struct obj *Obj)
         printf("\n");
     }
     //printf("TEST:here\n");*/
+    return CheckInsidePolygon(polygon->pointarray, Obj->CenterPoint, polygon->RelationMatrix, polygon->PointNum);//CompareArray(isRegion, isRegionCP, sizeof(isRegion)/sizeof(isRegion[0]));
+}
+
+bool CheckInsidePolygon(struct Point **select_point, struct Point *ReferencePoint, bool *RelationMatrix, int PointNum)
+{
+    int i, j, k;
+    int isRegion[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; 
+    int isRegionCP[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double x = CurrentPoint->x;
+    double y = CurrentPoint->y;
+    
+    k = 0;
+    for (i = 0; i < PointNum; i++) {
+        //printf("TEST:loop-\n");
+        for (j = i; j < PointNum; j++) {
+            //printf("TEST:loop0\n");
+            if (*(RelationMatrix + PointNum*i+j)) {
+                //printf("TEST:loop:%d, %d\n", i, j);
+                //printf("TEST:x: %f, y %f\n", polygon->pointarray[i]->x, polygon->pointarray[i]->y);
+                if (select_point[i]->x == select_point[j]->x) {
+                    if (x > select_point[i]->x) isRegion[k] = 1;
+                    k++;
+                } else if (select_point[i]->y == select_point[j]->y) {
+                    if (y > select_point[i]->y) isRegion[k] = 1;
+                    k++;
+                } else if ((x - select_point[i]->x)*(select_point[j]->y - select_point[i]->y)/(select_point[j]->x - select_point[i]->x)
+                     < 
+                    (y - select_point[i]->y)) {
+                        isRegion[k++] = 1;
+                        //printf("TEST:loop2:%d, %d\n", i, j);
+                } else {
+                    k++;
+                }
+            }
+        }
+    }
+    k = 0;
+    //printf("TEST:here\n");
+    for (i = 0; i < PointNum; i++) {
+        //printf("TEST:loop-\n");
+        for (j = i; j < PointNum; j++) {
+            //printf("TEST:loop0\n");
+            if (*(RelationMatrix + PointNum*i+j)) {
+                //printf("TEST:loop1:%d, %d\n", i, j);
+                if (select_point[i]->x == select_point[j]->x) {
+                    if (ReferencePoint->x > select_point[i]->x) isRegionCP[k] = 1;
+                    k++;
+                } else if (select_point[i]->y == select_point[j]->y) {
+                    if (ReferencePoint->y > select_point[i]->y) isRegionCP[k] = 1;
+                    k++;
+                } else if ((ReferencePoint->x - select_point[i]->x)*(select_point[j]->y - select_point[i]->y)/(select_point[j]->x - select_point[i]->x)
+                     < 
+                    (ReferencePoint->y - select_point[i]->y)) {
+                        isRegionCP[k++] = 1;
+                        //printf("TEST:loop2:%d, %d\n", i, j);
+                } else {
+                    k++;
+                }
+            }
+        }
+    }
     return CompareArray(isRegion, isRegionCP, sizeof(isRegion)/sizeof(isRegion[0]));
 }
 
@@ -916,8 +1028,8 @@ void CreateRotatePointForConvexPolygon(struct obj *Obj)
     struct TwoDhasEdge *temp = Obj->objPointer;
     struct Point *MiddlePoint = GetBlock(sizeof(struct Point));
 
-    MiddlePoint->x = (temp->pointarray[1]->x + temp->pointarray[2]->x)/2;
-    MiddlePoint->y = (temp->pointarray[1]->y + temp->pointarray[2]->y)/2;
+    MiddlePoint->x = (temp->pointarray[1]->x + temp->pointarray[0]->x)/2;
+    MiddlePoint->y = (temp->pointarray[1]->y + temp->pointarray[0]->y)/2;
     Obj->RotatePoint->x = 1.5*(MiddlePoint->x - Obj->CenterPoint->x) + Obj->CenterPoint->x;
     Obj->RotatePoint->y = 1.5*(MiddlePoint->y - Obj->CenterPoint->y) + Obj->CenterPoint->y;
 }
@@ -988,6 +1100,7 @@ void DrawDottedLine(struct Point *point1, struct Point *point2)
         SetEraseMode(flag);
         length += DL;
     }
+    DrawLine((len-length+DL)*cos0, (len-length+DL)*sin0);
     SetEraseMode(EraseMode);
     //printf("TEST:EraseMode2: %d\n", EraseMode);
     //printf("here\n");
@@ -1063,7 +1176,7 @@ void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
     if (x2 - xc < 0) {
         angle += PI;
     }
-    ChooseDrawWhat(PlaceHolder, PlaceHolder, RotatePolygon, PlaceHolder, PlaceHolder);
+    ChooseDrawWhat(PlaceHolder, RotatePolygon, RotatePolygon, PlaceHolder, PlaceHolder);
     RefreshAndDraw();
 }
 
@@ -1072,16 +1185,20 @@ void RotatePolygon(void) //also works when obj is TwoDhasEdge
     struct TwoDhasEdge *Polygon = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
     int pointnum = Polygon->PointNum;
     int i;
-    double xc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
-    double yc = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
+    double cx = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
+    double cy = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
+    //double tempX2 = RegisterP->RegisterObj[RegisterP->ActiveOne]->RotatePoint->x;
+    //double tempY2 = RegisterP->RegisterObj[RegisterP->ActiveOne]->RotatePoint->y;
     //printf("TEST:rotate:%d\n", RegisterP->ActiveOne);
     for (i = 0; i < pointnum; i++) {
-        double tempX = Polygon->pointarray[i]->x;
-        double tempY = Polygon->pointarray[i]->y;
+        double tempX1 = Polygon->pointarray[i]->x;
+        double tempY1 = Polygon->pointarray[i]->y;
 
-        Polygon->pointarray[i]->x = (tempX - xc) * cos(angle) + (yc - tempY) * sin(angle) + xc;
-        Polygon->pointarray[i]->y = (tempX - xc) * sin(angle) + (tempY - yc) * cos(angle) + yc;
+        Polygon->pointarray[i]->x = (tempX1 - cx) * cos(angle) + (cy - tempY1) * sin(angle) + cx;
+        Polygon->pointarray[i]->y = (tempX1 - cx) * sin(angle) + (tempY1 - cy) * cos(angle) + cy;
     }
+    //RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x = (tempX2 - cx) * cos(angle) + (cy - tempY2) * sin(angle) + cx;
+    //RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y = (tempX2 - cx) * sin(angle) + (tempY2 - cy) * cos(angle) + cy;
 }
 
 void InitLine(void) // can be merged with InitRectangle()
@@ -1142,6 +1259,10 @@ void CreateRotatePointForLine(struct obj* Obj)
     double y1 = ((struct TwoDhasEdge *)(Obj->objPointer))->pointarray[1]->y;
     double cx = Obj->CenterPoint->x;
     double cy = Obj->CenterPoint->y;
-    Obj->RotatePoint->x = LINE_ROTATE_POINT_DISTANCE / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cx;
-    Obj->RotatePoint->y = LINE_ROTATE_POINT_DISTANCE / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cy;
+    int i;
+
+    if ((x0 < x1 && y0 < y1) || (x0 > x1 && y1 > y0)) i = -1;
+    else i = 1;
+    Obj->RotatePoint->x = i * LINE_ROTATE_POINT_DISTANCE * fabs(y1-y0) / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cx;
+    Obj->RotatePoint->y = cy - (Obj->RotatePoint->x - cx) * (x1 - x0) / (y1 - y0); //LINE_ROTATE_POINT_DISTANCE * fabs(x1-x0) / sqrt(pow(y1-y0, 2) + pow(x1-x0, 2)) + cy;
 }
