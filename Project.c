@@ -28,6 +28,7 @@
 #define LINE_ROTATE_POINT_DISTANCE 0.5
 #define LINE_SELECT_WIDTH 0.2
 #define DEFAULT_ELLIPSE_RATIO 0.5
+#define D_ANGLE (3.1416/180)
 
 typedef enum {
     CURRENT_POINT_TIMER = 1
@@ -77,7 +78,7 @@ struct TwoDCurve {
     struct Point *pointarray[MAXPOINT];
     int PointNum;
     double ratio;
-}
+};
 
 struct obj {
     void *objPointer;
@@ -193,6 +194,7 @@ void DrawEllipse(void);
 void InitEllipse(void);
 void GetEllipseShape(void);
 void CreateRotatePointForEllipse(struct obj *Obj);
+void DrawOriginalEllipse(struct obj *Obj);
 
 void Main()
 {
@@ -324,7 +326,7 @@ static void LeftMouseUpDraw(void)
 {
     //printf("TEST:LeftMouseUpDraw\n");
     if (!isMouseDownMoving) DeleteObj();
-    printf("TEST:objnum:%d\n", RegisterP->ObjNum);
+    //printf("TEST:objnum:%d\n", RegisterP->ObjNum);
     isDrawing = FALSE;
     RegisterP->ActiveOne = -1;
     //DrawWhat = NO_TYPE;
@@ -333,9 +335,11 @@ static void LeftMouseUpDraw(void)
 static void LeftMouseMoveDraw(void)
 {
     //printf("TEST:LeftMouseMoveDraw\n");
+    //printf("TEST:here\n");
     if (isDrawing) {
         //SetPenColor();
         //printf("TEST:here %d\n", TestCount++);
+        //printf("TEST:here\n");
         GetShape();
         //printf("TEST:here %d\n", TestCount++);
         RefreshAndDraw();
@@ -526,7 +530,7 @@ void ChooseDrawWhat(void (*text)(void),
             rectangle();
             break;
         case ELLIPSE:
-            PlaceHolder();
+            ellipse();
             //ellipse();
             break;
         case LOCUS:
@@ -1270,7 +1274,7 @@ void CreateRotatePoint(struct obj *Obj) //can be optimized, similar to ChooseDra
             CreateRotatePointForConvexPolygon(Obj);
             break;
         case ELLIPSE:
-            CreateRotatePointForEliipse(Obj);
+            CreateRotatePointForEllipse(Obj);
             break;
         case LOCUS:
             break;
@@ -1318,22 +1322,23 @@ void DrawEllipse(void)
     struct TwoDCurve *ellipse = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
 
     SetPenColor(Obj->color);
-    Obj->CenterPoint->x = 0;
-    Obj->CenterPoint->y = 0;
+    //Obj->CenterPoint->x = 0;
+    //Obj->CenterPoint->y = 0;
 
-    DrawEllipticalArc(fabs(ellipse->pointarray[1]->x - ellipse->pointarray[0]->x)/2, 
+    /*DrawEllipticalArc(fabs(ellipse->pointarray[1]->x - ellipse->pointarray[0]->x)/2, 
                       fabs(ellipse->pointarray[2]->y - ellipse->pointarray[0]->y), 
-                      0, 360);
+                      0, 360);*/
     Obj->CenterPoint->x = (ellipse->pointarray[0]->x + ellipse->pointarray[1]->x)/2;
     Obj->CenterPoint->y = (ellipse->pointarray[0]->y + ellipse->pointarray[1]->y)/2;
+    DrawOriginalEllipse(Obj);
     CreateRotatePoint(Obj);
 }
 
 void InitEllipse(void)
 {
-    struct TwoDCurve *ellipse;
+    struct TwoDCurve *ellipse = GetBlock(sizeof(struct TwoDCurve));
     int i;
-
+    //printf("TEST:here\n");
     Register(ellipse, ELLIPSE);
     ellipse->PointNum = 3;
     for (i = 0; i < ellipse->PointNum; i++) {
@@ -1350,16 +1355,71 @@ void GetEllipseShape(void)
 
     temp->pointarray[1]->x = CurrentPoint->x;
     temp->pointarray[1]->y = temp->pointarray[0]->y;
-    temp->ratio += fabs(Current->y - temp->pointarray[1]->y)/fabs(temp->pointarray[1]->x - temp->pointarray[0]->x);
+    //printf("TEST:ratio: %f\n", temp->ratio);
+    printf("TEST: %f\n", fabs(temp->pointarray[1]->x - temp->pointarray[0]->x));
+    temp->ratio += fabs(CurrentPoint->y - temp->pointarray[1]->y)/fabs(temp->pointarray[1]->x - temp->pointarray[0]->x);
     temp->pointarray[2]->x = (temp->pointarray[0]->x + temp->pointarray[1]->x)/2;
     temp->pointarray[2]->y = temp->pointarray[0]->y + fabs(temp->pointarray[1]->x - temp->pointarray[0]->x) * temp->ratio / 2;
-
+    //printf("TEST:ratio: %f\n", temp->ratio);
+    printf("TEST:y2: %f\n", temp->pointarray[2]->y);
 }
 
 void CreateRotatePointForEllipse(struct obj *Obj)
 {
-    struct TwoDCurve *ellipse = obj->objPointer;
+    struct TwoDCurve *ellipse = Obj->objPointer;
 
-    Obj->RotatePoint->x = ellipse->pointarray[2]->x;
-    Obj->RotatePoint->y = 1.5*(ellipse->pointarray[2]->y - Obj->CenterPoint->y) + Obj->CenterPoint->y;
+    Obj->RotatePoint->x = 1.5 * (ellipse->pointarray[2]->x) - 0.5 * Obj->CenterPoint->x;
+    Obj->RotatePoint->y = 1.5 * (ellipse->pointarray[2]->y) - 0.5 * Obj->CenterPoint->y;
+    //Obj->RotatePoint->x = ellipse->pointarray[2]->x;
+    //Obj->RotatePoint->y = 1.5*(ellipse->pointarray[2]->y - Obj->CenterPoint->y) + Obj->CenterPoint->y;
+}
+
+void DrawOriginalEllipse(struct obj *Obj)//(struct Point *point0, struct Point *point1, struct Point *point2)
+{
+    double a, b;
+    double cx, cy;
+    double x0, x1, x2, y0, y1, y2;
+    double X, Y, x, y;
+    double angle0, angle = 0;
+    double radius;
+    struct TwoDCurve *ellipse = Obj->objPointer;
+
+    x0 = ellipse->pointarray[0]->x;
+    y0 = ellipse->pointarray[0]->y;
+    x1 = ellipse->pointarray[1]->x;
+    y1 = ellipse->pointarray[1]->y;
+    x2 = ellipse->pointarray[2]->x;
+    y2 = ellipse->pointarray[2]->y;
+    cx = Obj->CenterPoint->x;
+    cy = Obj->CenterPoint->y;
+    /*printf("TEST:x0: %f, y0: %f\n", x0, y0);
+    printf("TEST:x1: %f, y1: %f\n", x1, y1);
+    printf("TEST:x2: %f, y2: %f\n", x2, y2);
+    printf("TEST:cx: %f, cy: %f\n", cx, cy);
+    printf("\n\n");*/
+    //printf("TEST:here\n");
+    a = sqrt(pow(x0-x1, 2) + pow(y0-y1, 2)) / 2;
+    b = sqrt(pow(x2-cx, 2) + pow(y2-cy, 2));
+
+    radius = a;
+    angle0 = acos((x1-x0)/(2*a));
+    x = x1;
+    y = y1;
+    while ((angle += D_ANGLE) < 2*PI) {
+        MovePen(x, y);
+        radius = sqrt((pow(tan(angle), 2) + 1) /
+                      (1/(a*a) + pow(tan(angle), 2)/(b*b)));
+        //radius = sqrt(a*a*pow(cos(angle), 2) + b*b*pow(sin(angle), 2));
+        X = cx + radius * cos(angle + angle0);
+        Y = cy + radius * sin(angle + angle0);
+        DrawLine(X-x, Y-y);
+        x = X;
+        y = Y;
+        //angle += D_ANGLE;
+    }
+    DrawLine(x1-X, y1-Y);
+
+    /*do {
+        
+    } while ((angle += D_ANGLE) < 2*PI);*/
 }
