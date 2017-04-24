@@ -1410,8 +1410,11 @@ void DrawOriginalEllipse(struct obj *Obj)//(struct Point *point0, struct Point *
     b = sqrt(pow(x2-cx, 2) + pow(y2-cy, 2));
 
     radius = a;
-    if (x1 == x0 && y1 == y0) return;
+    if (x1 == x0 && y1 == y0) return; //all the part of angle modification could be merged
     angle0 = acos((x1-x0)/(2*a));
+    if ((x0 < x1 && y0 > y1) || (x0 > x1 && y0 > y1)) {
+        angle0 = -angle0;
+    }
     x = x1;
     y = y1;
     while ((angle += D_ANGLE) < 2*PI) {
