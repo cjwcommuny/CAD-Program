@@ -197,6 +197,9 @@ void InitEllipse(void);
 void GetEllipseShape(void);
 void CreateRotatePointForEllipse(struct obj *Obj);
 void DrawOriginalEllipse(struct obj *Obj);
+bool CheckEllipse(struct obj *Obj);
+void MoveEllipse(struct obj *Obj, double dx, double dy);
+void RotateEllipse(void);
 
 void Main()
 {
@@ -505,6 +508,7 @@ void MoveObj(struct obj *Obj, double dx, double dy)
             }*/
             break;
         case ELLIPSE:
+            MoveEllipse(Obj, dx, dy);
             break;
     }
     RefreshAndDraw();
@@ -775,7 +779,7 @@ bool CheckMouse(struct obj *Obj)
         case RECTANGLE:
             return CheckConvexPolygon(Obj);
         case ELLIPSE:
-            break;
+            return CheckEllipse(Obj);
         case LOCUS:
             break;
     }
@@ -1050,6 +1054,7 @@ void DrawRotatePoint(struct obj *Obj)
             DrawRotatePoint2(Obj);
             break;
         case ELLIPSE:
+            DrawRotatePoint2(Obj);
             break;
     }
 }
@@ -1207,7 +1212,7 @@ void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
     if (x2 - xc < 0) {
         angle += PI;
     }
-    ChooseDrawWhat(PlaceHolder, RotatePolygon, RotatePolygon, PlaceHolder, PlaceHolder);
+    ChooseDrawWhat(PlaceHolder, RotatePolygon, RotatePolygon, RotateEllipse, PlaceHolder);
     RefreshAndDraw();
 }
 
@@ -1358,7 +1363,7 @@ void GetEllipseShape(void)
     temp->pointarray[1]->x = CurrentPoint->x;
     temp->pointarray[1]->y = temp->pointarray[0]->y;
     //printf("TEST:ratio: %f\n", temp->ratio);
-    printf("TEST: %f\n", fabs(temp->pointarray[1]->x - temp->pointarray[0]->x));
+    //printf("TEST: %f\n", fabs(temp->pointarray[1]->x - temp->pointarray[0]->x));
     temp->ratio = DEFAULT_ELLIPSE_RATIO + fabs(CurrentPoint->y - temp->pointarray[1]->y) * RATIO_CONVERT;
     //if (fabs(temp->pointarray[1]->x - temp->pointarray[0]->x) > RATIO_LIMIT) temp->ratio = DEFAULT_ELLIPSE_RATIO + fabs(CurrentPoint->y - temp->pointarray[1]->y)/fabs(temp->pointarray[1]->x - temp->pointarray[0]->x);
     temp->pointarray[2]->x = (temp->pointarray[0]->x + temp->pointarray[1]->x)/2;
@@ -1426,4 +1431,58 @@ void DrawOriginalEllipse(struct obj *Obj)//(struct Point *point0, struct Point *
     /*do {
         
     } while ((angle += D_ANGLE) < 2*PI);*/
+}
+
+bool CheckEllipse(struct obj *Obj)
+{
+    struct TwoDCurve *ellipse = Obj->objPointer;
+    double cx, cy, a, b;
+    double x, y;
+    double cos0, sin0;
+    //printf("TEST:here\n");
+    cx = Obj->CenterPoint->x;
+    cy = Obj->CenterPoint->y;
+    a = sqrt(pow(ellipse->pointarray[0]->x - ellipse->pointarray[1]->x, 2) + pow(ellipse->pointarray[0]->y - ellipse->pointarray[1]->y, 2)) / 2;
+    b = a * ellipse->ratio;
+    x = CurrentPoint->x - cx;
+    y = CurrentPoint->y - cy;
+    //printf("TEST:x: %f, y:%f\n", x, y);
+    //printf("TEST:x0: %f, y0: %f\n", ellipse->pointarray[0]->x - cx, ellipse->pointarray[0]->y - cy);
+    //printf("TEST:x1: %f, y1: %f\n", ellipse->pointarray[1]->x - cx, ellipse->pointarray[1]->y - cy);
+    //printf("TEST:x2: %f, y2: %f\n", ellipse->pointarray[2]->x - cx, ellipse->pointarray[2]->y - cy);
+    //printf("TEST:a: %f, b: %f\n", a, b);
+    cos0 = (ellipse->pointarray[1]->x - ellipse->pointarray[0]->x)/(2*a);
+    sin0 = (ellipse->pointarray[1]->y - ellipse->pointarray[0]->y)/(2*a);
+    //printf("TEST:x*sin0 - y*cos0: %f, x*cos0 + y*sin0: %f\n", x*cos0 + y*sin0, x*sin0 - y*cos0);
+    //printf("TEST:result %d\n", pow(x*cos0 + y*sin0, 2)/(a*a) + pow(x*sin0 - y*cos0, 2)/(b*b) <= 1);
+    return pow(x*cos0 + y*sin0, 2)/(a*a) + pow(x*sin0 - y*cos0, 2)/(b*b) <= 1;   
+}
+
+void MoveEllipse(struct obj *Obj, double dx, double dy)
+{
+    int i;
+
+    for (i = 0; i < ((struct TwoDCurve *) Obj->objPointer)->PointNum; i++) {
+        ((struct TwoDCurve *) Obj->objPointer)->pointarray[i]->x += dx;
+        ((struct TwoDCurve *) Obj->objPointer)->pointarray[i]->y += dy;
+    }
+}
+
+void RotateEllipse(void)
+{
+    struct TwoDCurve *ellipse = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+    int pointnum = ellipse->PointNum;
+    int i;
+    double cx = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
+    double cy = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
+    //double tempX2 = RegisterP->RegisterObj[RegisterP->ActiveOne]->RotatePoint->x;
+    //double tempY2 = RegisterP->RegisterObj[RegisterP->ActiveOne]->RotatePoint->y;
+    //printf("TEST:rotate:%d\n", RegisterP->ActiveOne);
+    for (i = 0; i < pointnum; i++) {
+        double tempX1 = ellipse->pointarray[i]->x;
+        double tempY1 = ellipse->pointarray[i]->y;
+
+        ellipse->pointarray[i]->x = (tempX1 - cx) * cos(angle) + (cy - tempY1) * sin(angle) + cx;
+        ellipse->pointarray[i]->y = (tempX1 - cx) * sin(angle) + (tempY1 - cy) * cos(angle) + cy;
+    }
 }
