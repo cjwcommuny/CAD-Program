@@ -31,6 +31,12 @@
 #define RATIO_LIMIT 0.1
 #define RATIO_CONVERT 1.5
 #define D_ANGLE (3.1416/180)
+#define SIZE_FACTOR 0.1
+
+typedef enum {
+    ZOOM_IN,
+    ZOOM_OUT
+} ZoomType;
 
 typedef enum {
     CURRENT_POINT_TIMER = 1
@@ -200,6 +206,8 @@ void DrawOriginalEllipse(struct obj *Obj);
 bool CheckEllipse(struct obj *Obj);
 void MoveEllipse(struct obj *Obj, double dx, double dy);
 void RotateEllipse(void);
+void Zoom(struct obj *Obj, int zoom);
+void ZoomTwoDhasEdge(struct obj *Obj, int zoom);
 
 void Main()
 {
@@ -284,6 +292,16 @@ void MouseEventProcess(int x, int y, int button, int event)
             //ChooseButton(LeftMouseMoveDraw/*,,,,,*/, button);
             if (isMouseDown) isMouseDownMoving = TRUE;
             ChooseMode(LeftMouseMoveDraw, LeftMouseMoveOperate);
+            break;
+        case ROLL_UP:
+            if (RegisterP->ActiveOne != -1) {
+                Zoom(RegisterP->RegisterObj[RegisterP->ActiveOne], ZOOM_OUT);
+            }
+            break;
+        case ROLL_DOWN:
+            if (RegisterP->ActiveOne != -1) {
+                Zoom(RegisterP->RegisterObj[RegisterP->ActiveOne], ZOOM_IN);
+            }
             break;
     }
 }
@@ -1487,5 +1505,69 @@ void RotateEllipse(void)
 
         ellipse->pointarray[i]->x = (tempX1 - cx) * cos(angle) + (cy - tempY1) * sin(angle) + cx;
         ellipse->pointarray[i]->y = (tempX1 - cx) * sin(angle) + (tempY1 - cy) * cos(angle) + cy;
+    }
+}
+
+void Zoom(struct obj *Obj, int zoom)
+{
+    switch (Obj->DrawType) {
+        case TEXT:
+            break;
+        case LINE:
+            ZoomTwoDhasEdge(Obj, zoom);
+            break;
+        case RECTANGLE:
+            ZoomTwoDhasEdge(Obj, zoom);
+            break;
+        case ELLIPSE:
+            ZoomEllipse(Obj, zoom);
+            break;
+        case LOCUS:
+            break;
+    }
+    RefreshAndDraw();
+}
+
+void ZoomTwoDhasEdge(struct obj *Obj, int zoom)
+{
+    struct TwoDhasEdge *polygon = Obj->objPointer;
+    int i, pointnum;
+    //double distance;
+    double cx, cy;
+
+    cx = Obj->CenterPoint->x;
+    cy = Obj->CenterPoint->y;
+    pointnum = polygon->PointNum;
+    for (i = 0; i < pointnum; i++) {
+        //distance = sqrt(pow(polygon->pointarray[i]->x - cx, 2) + pow(polygon->pointarray[i]->y - cy, 2));
+        if (zoom == ZOOM_IN) {
+            polygon->pointarray[i]->x = (1 - SIZE_FACTOR) * (polygon->pointarray[i]->x - cx) + cx;
+            polygon->pointarray[i]->y = (1 - SIZE_FACTOR) * (polygon->pointarray[i]->y - cy) + cy;
+        } else if (zoom == ZOOM_OUT) {
+            polygon->pointarray[i]->x = (1 + SIZE_FACTOR) * (polygon->pointarray[i]->x - cx) + cx;
+            polygon->pointarray[i]->y = (1 + SIZE_FACTOR) * (polygon->pointarray[i]->y - cy) + cy;
+        }
+    }
+}
+
+void ZoomEllipse(struct obj *Obj, int zoom)
+{
+    struct TwoDCurve *polygon = Obj->objPointer;
+    int i, pointnum;
+    //double distance;
+    double cx, cy;
+
+    cx = Obj->CenterPoint->x;
+    cy = Obj->CenterPoint->y;
+    pointnum = polygon->PointNum;
+    for (i = 0; i < pointnum; i++) {
+        //distance = sqrt(pow(polygon->pointarray[i]->x - cx, 2) + pow(polygon->pointarray[i]->y - cy, 2));
+        if (zoom == ZOOM_IN) {
+            polygon->pointarray[i]->x = (1 - SIZE_FACTOR) * (polygon->pointarray[i]->x - cx) + cx;
+            polygon->pointarray[i]->y = (1 - SIZE_FACTOR) * (polygon->pointarray[i]->y - cy) + cy;
+        } else if (zoom == ZOOM_OUT) {
+            polygon->pointarray[i]->x = (1 + SIZE_FACTOR) * (polygon->pointarray[i]->x - cx) + cx;
+            polygon->pointarray[i]->y = (1 + SIZE_FACTOR) * (polygon->pointarray[i]->y - cy) + cy;
+        }
     }
 }
