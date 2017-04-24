@@ -29,8 +29,8 @@
 #define LINE_SELECT_WIDTH 0.2
 #define DEFAULT_ELLIPSE_RATIO 0.2
 #define RATIO_LIMIT 0.1
-#define RATIO_CONVERT 1.5
-#define D_ANGLE (3.1416/180)
+#define RATIO_CONVERT 1
+#define D_ANGLE (3.1416/60)
 #define SIZE_FACTOR 0.1
 
 typedef enum {
