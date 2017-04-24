@@ -27,7 +27,9 @@
 #define PI 3.14159
 #define LINE_ROTATE_POINT_DISTANCE 0.5
 #define LINE_SELECT_WIDTH 0.2
-#define DEFAULT_ELLIPSE_RATIO 0.5
+#define DEFAULT_ELLIPSE_RATIO 0.2
+#define RATIO_LIMIT 0.1
+#define RATIO_CONVERT 1.5
 #define D_ANGLE (3.1416/180)
 
 typedef enum {
@@ -1357,11 +1359,12 @@ void GetEllipseShape(void)
     temp->pointarray[1]->y = temp->pointarray[0]->y;
     //printf("TEST:ratio: %f\n", temp->ratio);
     printf("TEST: %f\n", fabs(temp->pointarray[1]->x - temp->pointarray[0]->x));
-    temp->ratio += fabs(CurrentPoint->y - temp->pointarray[1]->y)/fabs(temp->pointarray[1]->x - temp->pointarray[0]->x);
+    temp->ratio = DEFAULT_ELLIPSE_RATIO + fabs(CurrentPoint->y - temp->pointarray[1]->y) * RATIO_CONVERT;
+    //if (fabs(temp->pointarray[1]->x - temp->pointarray[0]->x) > RATIO_LIMIT) temp->ratio = DEFAULT_ELLIPSE_RATIO + fabs(CurrentPoint->y - temp->pointarray[1]->y)/fabs(temp->pointarray[1]->x - temp->pointarray[0]->x);
     temp->pointarray[2]->x = (temp->pointarray[0]->x + temp->pointarray[1]->x)/2;
     temp->pointarray[2]->y = temp->pointarray[0]->y + fabs(temp->pointarray[1]->x - temp->pointarray[0]->x) * temp->ratio / 2;
     //printf("TEST:ratio: %f\n", temp->ratio);
-    printf("TEST:y2: %f\n", temp->pointarray[2]->y);
+    //printf("TEST:y2: %f\n", temp->pointarray[2]->y);
 }
 
 void CreateRotatePointForEllipse(struct obj *Obj)
@@ -1402,6 +1405,7 @@ void DrawOriginalEllipse(struct obj *Obj)//(struct Point *point0, struct Point *
     b = sqrt(pow(x2-cx, 2) + pow(y2-cy, 2));
 
     radius = a;
+    if (x1 == x0 && y1 == y0) return;
     angle0 = acos((x1-x0)/(2*a));
     x = x1;
     y = y1;
