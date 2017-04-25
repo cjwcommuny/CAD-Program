@@ -145,7 +145,7 @@ static bool isDrawing = FALSE;
 static bool isOperating = FALSE;
 static bool isRotating = FALSE;
 static bool isMovingObj = FALSE;
-static bool isCacelSelect = FALSE;
+static bool isCancelSelect = FALSE;
 static bool isCursorBlink = FALSE;
 //static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
@@ -294,6 +294,7 @@ void TimerEventProcess(int timerID)
     //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
     switch (timerID) {
         case CURSOR_BLINK:
+            if (RegisterP->ActiveOne == -1) return;
             if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
             //printf("TEST:here\n");
@@ -439,7 +440,7 @@ static void LeftMouseDownOperate(void)
                 //DrawWhat = RegisterP->RegisterObj[i]->DrawType;
                 //RegisterP->ActiveOne = i;
                 if (RegisterP->ActiveOne == i) {
-                    isCacelSelect = TRUE;
+                    isCancelSelect = TRUE;
                 } else {
                     if (SelectNum >= 1) {
                         for (j = 0; j < objnum; j++) {
@@ -508,8 +509,8 @@ static void LeftMouseUpOperate(void)
             RefreshAndDraw();
         }*/
     //}
-    //printf("TEST:%d, %d\n", isMouseDownMoving, isCacelSelect);
-    if (!isMouseDownMoving && isCacelSelect) { //cancel selecting this obj
+    //printf("TEST:%d, %d\n", isMouseDownMoving, isCancelSelect);
+    if (!isMouseDownMoving && isCancelSelect) { //cancel selecting this obj
         //printf("TEST:%d\n", RegisterP->ActiveOne);
         if (RegisterP->ActiveOne != -1) RegisterP->RegisterObj[RegisterP->ActiveOne]->color = DEFAULT_COLOR;
         RefreshAndDraw();
@@ -518,7 +519,7 @@ static void LeftMouseUpOperate(void)
     }
     isOperating = FALSE;
     isRotating = FALSE;
-    isCacelSelect = FALSE;
+    isCancelSelect = FALSE;
     isMovingObj = FALSE;
 }
 
@@ -1721,7 +1722,10 @@ void DrawTwoDText(void)
     int i, j, pointnum;
     struct TwoDText *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
     struct obj *Obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
+    bool EraseMode;
 
+    EraseMode = GetEraseMode();
+    SetEraseMode(isCancelSelect);
     SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
     Obj->CenterPoint->x = 0;
     Obj->CenterPoint->y = 0;
@@ -1744,6 +1748,7 @@ void DrawTwoDText(void)
     if (Obj->color == SELECT_COLOR) {
         DrawPureText();
     }
+    SetEraseMode(EraseMode);
 }
 
 void DrawPureText(void)
