@@ -32,6 +32,8 @@
 #define RATIO_CONVERT 1
 #define D_ANGLE (3.1416/60)
 #define SIZE_FACTOR 0.1
+#define INIT_TEXT_FRAME_WIDTH 4
+#define INIT_TEXT_FRAME_HEIGHT 3
 
 typedef enum {
     ZOOM_IN,
@@ -86,6 +88,13 @@ struct TwoDCurve {
     struct Point *pointarray[MAXPOINT];
     int PointNum;
     double ratio;
+};
+
+struct TwoDText {
+    struct TwoDhasEdge *frame;
+    char *TextArray;
+    struct Point *CursorPosition;
+    int CursorIndex;
 };
 
 struct obj {
@@ -208,6 +217,8 @@ void MoveEllipse(struct obj *Obj, double dx, double dy);
 void RotateEllipse(void);
 void Zoom(struct obj *Obj, int zoom);
 void ZoomTwoDhasEdge(struct obj *Obj, int zoom);
+void InitText(void);
+void DrawTextFrame(struct TwoDhasEdge *polygon, char *color);
 
 void Main()
 {
@@ -341,7 +352,7 @@ static void LeftMouseDownDraw(void)
 {
     //printf("TEST:LeftMouseDownDraw\n");
     isDrawing = TRUE;
-    ChooseDrawWhat(PlaceHolder, InitLine, InitRectangle, InitEllipse, PlaceHolder);
+    ChooseDrawWhat(InitText, InitLine, InitRectangle, InitEllipse, PlaceHolder);
     //printf("TEST:LeftMouseDownDraw over\n");
 }
 
@@ -738,6 +749,26 @@ void DrawTwoDhasEdge(void)
     //SetPenColor(PenColor);
 }
 
+
+void DrawTextFrame(struct TwoDhasEdge *polygon, char *color)
+{
+    int i, j;
+    char * PreColor;
+    int pointnum;
+
+    PreColor = GetPenColor();
+    SetPenColor(color);
+    pointnum = polygon->PointNum;
+    for (i = 0; i < pointnum; i++) {
+        for (j = i; j < pointnum; j++) {
+            //printf("TEST:here\n");
+            //printf("TEST:matrix: %d\n", polygon->RelationMatrix[i][j]);
+            if (*(polygon->RelationMatrix +pointnum*i+j)) DrawDottedLine(polygon->pointarray[i], polygon->pointarray[j]);
+        }
+    }
+    SetPenColor(PreColor);
+}
+
 void DrawLineByPoint(struct Point *point1, struct Point *point2)
 {
     //printf("TEST:DrawLineByPoint\n");
@@ -1006,7 +1037,8 @@ void SetMode(void)
             break;
         case 2:
             mode = DRAW; //draw and text are handled together
-            SetFunction();
+            DrawWhat = TEXT;
+            //SetFunction();
             break;
         case 3:
             mode = OPERATE;
@@ -1570,4 +1602,33 @@ void ZoomEllipse(struct obj *Obj, int zoom)
             polygon->pointarray[i]->y = (1 + SIZE_FACTOR) * (polygon->pointarray[i]->y - cy) + cy;
         }
     }
+}
+
+void InitText(void)
+{
+    struct TwoDText *text = GetBlock(sizeof(struct TwoDText));
+    int i;
+
+    Register(text, TEXT);
+
+    text->frame = GetBlock(sizeof(struct TwoDhasEdge));
+    text->frame->PointNum = 4;
+    for (i = 0; i < text->frame->PointNum; i++) {
+        (text->frame->pointarray)[i] = GetBlock(sizeof(struct Point));
+    }
+    (text->frame->pointarray)[0]->x = CurrentPoint->x;
+    (text->frame->pointarray)[0]->y = CurrentPoint->y + GetFontHeight();
+    (text->frame->pointarray)[1]->x = (text->frame->pointarray)[0]->x + INIT_TEXT_FRAME_WIDTH;
+    (text->frame->pointarray)[1]->y = (text->frame->pointarray)[0]->y;
+    (text->frame->pointarray)[2]->x = (text->frame->pointarray)[1]->x;
+    (text->frame->pointarray)[2]->y = (text->frame->pointarray)[1]->y - INIT_TEXT_FRAME_HEIGHT;
+    (text->frame->pointarray)[3]->x = (text->frame->pointarray)[0]->x;
+    (text->frame->pointarray)[3]->y = (text->frame->pointarray)[2]->y;
+    text->frame->RelationMatrix = RectangleMatrix;
+    DrawTextFrame(text, RegisterP->RegisterObj[RegisterP->ActiveOne]->color);
+
+    text->CursorIndex = 0;
+    text->CursorPosition = GetBlock(sizeof(struct Point));
+    text->CursorPosition->x = CurrentPoint->x;
+    text->CursorPosition->y = CurrentPoint->y;
 }
