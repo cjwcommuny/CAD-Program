@@ -18,6 +18,7 @@
 
 #define MAXOBJ 50
 #define MAXPOINT 10
+#define MAX_TEXT_LENGTH 200
 #define DEFAULT_COLOR "Black"
 #define SELECT_COLOR "Red"
 #define POINT_COLOR "Magenta"
@@ -41,11 +42,13 @@ typedef enum {
 } ZoomType;
 
 typedef enum {
-    CURRENT_POINT_TIMER = 1
+    //CURRENT_POINT_TIMER = 1
+    CURSOR_BLINK = 1
 } timerID;
 
 typedef enum {
-    CURRENT_POINT_MSECONDS = 5
+    //CURRENT_POINT_MSECONDS = 5
+    CURSOR_BLINK_TIME = 500
 } mseconds;
 
 typedef enum {
@@ -94,10 +97,13 @@ struct TwoDText {
     //struct TwoDhasEdge *frame;
     struct Point *pointarray[MAXPOINT];
     int PointNum;
-    bool *RelationMatrix; 
+    bool *RelationMatrix;
+
     char *TextArray;
     struct Point *CursorPosition;
     int CursorIndex;
+    bool isCursorBlink;
+    bool isDisplayCursor;
 };
 
 struct obj {
@@ -140,18 +146,21 @@ static bool isOperating = FALSE;
 static bool isRotating = FALSE;
 static bool isMovingObj = FALSE;
 static bool isCacelSelect = FALSE;
+static bool isCursorBlink = FALSE;
 //static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
 static int SelectNum = 0;
 static double angle;
 int TestCount = 0;
+//int CURSOR_BLINK = 1;
+//int CURSOR_BLINK_TIME = 500;
 
 
 void KeyboardEventProcess(int key,int event);
 void CharEventProcess(char c);
 void MouseEventProcess(int x, int y, int button, int event);
-//void TimerEventProcess(int timerID);
+void TimerEventProcess(int timerID);
 
 void GetCurrentPoint(void);
 static void ChooseButton(void (*left1)(void), void (*left2)(void)/*, 
@@ -184,6 +193,7 @@ void UpdateRectangle(void);
 bool CheckMouse(struct obj *Obj);
 bool CheckLine(struct obj *Obj);
 bool CheckConvexPolygon(struct obj *Obj);
+bool CheckText(struct obj *Obj);
 bool CompareArray(int *array1, int *array2, int length);
 void SetMode(void);
 void SetFunction(void);
@@ -225,6 +235,7 @@ void DrawTextFrame(struct TwoDhasEdge *polygon, char *color);
 void GetTextFrameShape(void);
 void DrawTwoDText(void);
 void DrawPureText(void);
+void DisplayCursor(double x, double y);
 
 void Main()
 {
@@ -244,7 +255,7 @@ void Main()
 	registerKeyboardEvent(KeyboardEventProcess);
 	registerCharEvent(CharEventProcess);
 	registerMouseEvent(MouseEventProcess);
-	//registerTimerEvent(TimerEventProcess);
+	registerTimerEvent(TimerEventProcess);
 }
 
 void KeyboardEventProcess(int key,int event)
@@ -277,16 +288,27 @@ void CharEventProcess(char c)
 {
 
 }
-/*
+
 void TimerEventProcess(int timerID)
 {
+    //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
     switch (timerID) {
-        case CURRENT_POINT_TIMER:
-            GetCurrentPoint();
+        case CURSOR_BLINK:
+            if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+            struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+            //printf("TEST:here\n");
+            if (!(text->isCursorBlink)) return;
+            //printf("TEST:here\n");
+            SetEraseMode(!(text->isDisplayCursor));
+            //printf("TEST: %d\n", text->isDisplayCursor);
+            //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
+            DisplayCursor(text->CursorPosition->x, text->CursorPosition->y);
+            //SetEraseMode(erasemode);
+            text->isDisplayCursor = !(text->isDisplayCursor);
             break;
     }
 }
-*/
+
 void MouseEventProcess(int x, int y, int button, int event)
 {
     PreviousPoint->x = CurrentPoint->x;
@@ -365,12 +387,20 @@ static void LeftMouseDownDraw(void)
 static void LeftMouseUpDraw(void)
 {
     //printf("TEST:LeftMouseUpDraw\n");
+    //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
     if (!isMouseDownMoving && RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
         DeleteObj();
     }
+    if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType == TEXT) {
+        //printf("TEST:here\n");
+        //printf("TEST:3: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
+        //startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
+        //printf("TEST:here\n");
+    } else {
+        RegisterP->ActiveOne = -1;
+    }
     //printf("TEST:objnum:%d\n", RegisterP->ObjNum);
     isDrawing = FALSE;
-    RegisterP->ActiveOne = -1;
     //DrawWhat = NO_TYPE;
 }
 
@@ -833,7 +863,7 @@ bool CheckMouse(struct obj *Obj)
     //printf("TEST:CheckMouse\n");
     switch (Obj->DrawType) {
         case TEXT:
-            break;
+            return CheckText(Obj);
         case LINE:
             return CheckLine(Obj);
         case RECTANGLE:
@@ -1037,6 +1067,7 @@ void SetMode(void)
     int input;
 
     RefreshAndDraw();
+    cancelTimer(CURSOR_BLINK);
     InitConsole();
     printf("Which mode do you want? Choose the index from below.\n");
     printf("1: Draw object\n2: Type text\n3: Operate object\n");
@@ -1116,6 +1147,8 @@ void DrawRotatePoint(struct obj *Obj)
             break;
         case ELLIPSE:
             DrawRotatePoint2(Obj);
+            break;
+        default:
             break;
     }
 }
@@ -1649,10 +1682,14 @@ void InitText(void)
     }
     (text->pointarray)[0]->x = CurrentPoint->x;
     (text->pointarray)[0]->y = CurrentPoint->y + GetFontHeight();
+    
+    text->TextArray = GetBlock( MAX_TEXT_LENGTH * sizeof(char));
     text->CursorIndex = 0;
     text->CursorPosition = GetBlock(sizeof(struct Point));
     text->CursorPosition->x = CurrentPoint->x;
-    text->CursorPosition->y = CurrentPoint->y;
+    text->CursorPosition->y = CurrentPoint->y;// - GetFontHeight(); ????????
+    text->isCursorBlink = TRUE;
+    text->isDisplayCursor = FALSE;
 }
 
 
@@ -1700,10 +1737,31 @@ void DrawTwoDText(void)
     }
     Obj->CenterPoint->x /= obj->PointNum;
     Obj->CenterPoint->y /= obj->PointNum;
-    DrawPureText();
+    if (Obj->color == SELECT_COLOR || isMouseDownMoving) {
+        printf("TEST:here\n");
+        startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
+    }
+    if (Obj->color == SELECT_COLOR) {
+        DrawPureText();
+    }
 }
 
 void DrawPureText(void)
 {
     
+}
+
+void DisplayCursor(double x, double y)
+{
+    char cursor[] = {'|', '\0'};
+
+    MovePen(x, y);
+    DrawTextString(cursor);
+}
+
+bool CheckText(struct obj *Obj)
+{
+    struct TwoDText *text = Obj->objPointer;
+
+    return CheckInsidePolygon(text->pointarray, Obj->CenterPoint, text->RelationMatrix, text->PointNum);
 }
