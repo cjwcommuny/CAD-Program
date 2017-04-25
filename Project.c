@@ -91,7 +91,10 @@ struct TwoDCurve {
 };
 
 struct TwoDText {
-    struct TwoDhasEdge *frame;
+    //struct TwoDhasEdge *frame;
+    struct Point *pointarray[MAXPOINT];
+    int PointNum;
+    bool *RelationMatrix; 
     char *TextArray;
     struct Point *CursorPosition;
     int CursorIndex;
@@ -219,6 +222,9 @@ void Zoom(struct obj *Obj, int zoom);
 void ZoomTwoDhasEdge(struct obj *Obj, int zoom);
 void InitText(void);
 void DrawTextFrame(struct TwoDhasEdge *polygon, char *color);
+void GetTextFrameShape(void);
+void DrawTwoDText(void);
+void DrawPureText(void);
 
 void Main()
 {
@@ -359,7 +365,9 @@ static void LeftMouseDownDraw(void)
 static void LeftMouseUpDraw(void)
 {
     //printf("TEST:LeftMouseUpDraw\n");
-    if (!isMouseDownMoving && RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) DeleteObj();
+    if (!isMouseDownMoving && RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
+        DeleteObj();
+    }
     //printf("TEST:objnum:%d\n", RegisterP->ObjNum);
     isDrawing = FALSE;
     RegisterP->ActiveOne = -1;
@@ -663,7 +671,7 @@ void RefreshAndDraw(void)
         if (position->color == SELECT_COLOR) {
             DrawRotatePoint(position);
         }
-        ChooseDrawWhat(PlaceHolder, DrawTwoDhasEdge, DrawTwoDhasEdge, DrawEllipse, PlaceHolder);
+        ChooseDrawWhat(DrawTwoDText, DrawTwoDhasEdge, DrawTwoDhasEdge, DrawEllipse, PlaceHolder);
     }
     SetPenColor(PenColor);
     RegisterP->ActiveOne = activeone;
@@ -756,13 +764,14 @@ void DrawTextFrame(struct TwoDhasEdge *polygon, char *color)
     char * PreColor;
     int pointnum;
     //printf("TEST:here\n");
+    RefreshAndDraw();
     PreColor = GetPenColor();
     SetPenColor(color);
     printf("TEST:color: %s\n", color);
     pointnum = polygon->PointNum;
     for (i = 0; i < pointnum; i++) {
         for (j = i; j < pointnum; j++) {
-            printf("TEST:index: %d, x: %f, y: %f\n", i, polygon->pointarray[i]->x, polygon->pointarray[i]->y);
+            //printf("TEST:index: %d, x: %f, y: %f\n", i, polygon->pointarray[i]->x, polygon->pointarray[i]->y);
             //printf("TEST:here\n");
             //printf("TEST:matrix: %d\n", polygon->RelationMatrix[i][j]);
             if (*(polygon->RelationMatrix +pointnum*i+j)) DrawDottedLine(polygon->pointarray[i], polygon->pointarray[j]);
@@ -1162,20 +1171,24 @@ void DrawRotatePoint2(struct obj *Obj)
 
 void DrawDottedLine(struct Point *point1, struct Point *point2)
 {
-    double len = sqrt(pow(point2->x - point1->x, 2) + pow(point2->y - point1->y, 2));
+    double len; //= sqrt(pow(point2->x - point1->x, 2) + pow(point2->y - point1->y, 2));
     //printf("TEST:X: %f, Y %f\n", point2->x - point1->x, point2->y - point1->y);
     double length = 0;
-    double cos0 = (point2->x - point1->x)/len;
-    double sin0 = (point2->y - point1->y)/len;
+    double cos0;// = (point2->x - point1->x)/len;
+    double sin0;// = (point2->y - point1->y)/len;
     bool flag = FALSE;
     bool EraseMode = GetEraseMode();
     //printf("TEST:EraseMode1: %d\n", EraseMode);
     //printf("here\n");
     //printf("TEST:color:%s\n", GetPenColor());
+    len = sqrt(pow(point2->x - point1->x, 2) + pow(point2->y - point1->y, 2));
+    if (len == 0) return;
+    cos0 = (point2->x - point1->x)/len;
+    sin0 = (point2->y - point1->y)/len;
     MovePen(point1->x, point1->y);
     //printf("TEST:1: %f, %f\n2: %f, %f\n", point1->x, point1->y, point2->x, point2->y);
     //printf("TEST:point:%f, %f\n", point1->x, point1->y);
-    //printf("here\n");
+    //printf("TEST:here\n");
     //printf("TEST: %f\n", len);
     //SetPenColor("Red");
     SetEraseMode(FALSE);
@@ -1307,7 +1320,7 @@ void InitLine(void) // can be merged with InitRectangle()
 void GetShape(void)
 {
     //printf("TEST:here\n");
-    ChooseDrawWhat(PlaceHolder, GetLineShape, GetRectangleShape, GetEllipseShape, PlaceHolder);
+    ChooseDrawWhat(GetTextFrameShape, GetLineShape, GetRectangleShape, GetEllipseShape, PlaceHolder);
 }
 
 void GetLineShape()
@@ -1612,8 +1625,9 @@ void InitText(void)
     int i;
 
     Register(text, TEXT);
+    text->PointNum = 4;
     //printf("TEST:here\n");
-    text->frame = GetBlock(sizeof(struct TwoDhasEdge));
+    /*text->frame = GetBlock(sizeof(struct TwoDhasEdge));
     text->frame->PointNum = 4;
     for (i = 0; i < text->frame->PointNum; i++) {
         (text->frame->pointarray)[i] = GetBlock(sizeof(struct Point));
@@ -1627,10 +1641,69 @@ void InitText(void)
     (text->frame->pointarray)[3]->x = (text->frame->pointarray)[0]->x;
     (text->frame->pointarray)[3]->y = (text->frame->pointarray)[2]->y;
     text->frame->RelationMatrix = RectangleMatrix;
-    DrawTextFrame(text->frame, RegisterP->RegisterObj[RegisterP->ActiveOne]->color);
+    DrawTextFrame(text->frame, RegisterP->RegisterObj[RegisterP->ActiveOne]->color);*/
     //printf("TEST:here\n");
+    text->RelationMatrix = RectangleMatrix;
+    for (i = 0; i < text->PointNum; i++) {
+        (text->pointarray)[i] = GetBlock(sizeof(struct Point));
+    }
+    (text->pointarray)[0]->x = CurrentPoint->x;
+    (text->pointarray)[0]->y = CurrentPoint->y + GetFontHeight();
     text->CursorIndex = 0;
     text->CursorPosition = GetBlock(sizeof(struct Point));
     text->CursorPosition->x = CurrentPoint->x;
     text->CursorPosition->y = CurrentPoint->y;
+}
+
+
+void GetTextFrameShape(void)
+{
+    struct TwoDText *text = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    //printf("TEST: pointnum: %d\n", text->PointNum);
+    text->pointarray[2]->x = CurrentPoint->x;
+    text->pointarray[2]->y = CurrentPoint->y;
+    text->pointarray[1]->x = text->pointarray[2]->x;
+    text->pointarray[1]->y = text->pointarray[0]->y;
+    text->pointarray[3]->x = text->pointarray[0]->x;
+    text->pointarray[3]->y = text->pointarray[2]->y;
+}
+/*void GetTextFrameShape(void)
+{
+    struct TwoDText * text = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+
+    text->pointarray[2]->x = CurrentPoint->x;
+    text->pointarray[2]->y = CurrentPoint->y;
+    text->pointarray[1]->x = text->pointarray[2]->x;
+    text->pointarray[1]->y = text->pointarray[0]->y;
+    text->pointarray[3]->x = text->pointarray[0]->x;
+    text->pointarray[3]->y = text->pointarray[2]->y;
+}*/
+
+void DrawTwoDText(void)
+{
+    int i, j, pointnum;
+    struct TwoDText *obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
+    struct obj *Obj = (RegisterP->RegisterObj)[RegisterP->ActiveOne];
+
+    SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
+    Obj->CenterPoint->x = 0;
+    Obj->CenterPoint->y = 0;
+    pointnum = obj->PointNum;
+    for (i = 0; i < pointnum; i++) {
+         Obj->CenterPoint->x += obj->pointarray[i]->x;
+         Obj->CenterPoint->y += obj->pointarray[i]->y;
+        for (j = i; j < pointnum; j++) {
+            //printf("TEST:here\n");
+            //printf("TEST:matrix: %d\n", obj->RelationMatrix[i][j]);
+            if (*(obj->RelationMatrix +pointnum*i+j)) DrawDottedLine(obj->pointarray[i], obj->pointarray[j]);
+        }
+    }
+    Obj->CenterPoint->x /= obj->PointNum;
+    Obj->CenterPoint->y /= obj->PointNum;
+    DrawPureText();
+}
+
+void DrawPureText(void)
+{
+    
 }
