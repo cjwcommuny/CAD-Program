@@ -359,7 +359,7 @@ static void LeftMouseDownDraw(void)
 static void LeftMouseUpDraw(void)
 {
     //printf("TEST:LeftMouseUpDraw\n");
-    if (!isMouseDownMoving) DeleteObj();
+    if (!isMouseDownMoving && RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) DeleteObj();
     //printf("TEST:objnum:%d\n", RegisterP->ObjNum);
     isDrawing = FALSE;
     RegisterP->ActiveOne = -1;
@@ -554,7 +554,7 @@ void ChooseDrawWhat(void (*text)(void),
         case NO_TYPE:
             break;
         case TEXT:
-            PlaceHolder();
+            text();
             //text();
             break;
         case LINE:
@@ -755,12 +755,14 @@ void DrawTextFrame(struct TwoDhasEdge *polygon, char *color)
     int i, j;
     char * PreColor;
     int pointnum;
-
+    //printf("TEST:here\n");
     PreColor = GetPenColor();
     SetPenColor(color);
+    printf("TEST:color: %s\n", color);
     pointnum = polygon->PointNum;
     for (i = 0; i < pointnum; i++) {
         for (j = i; j < pointnum; j++) {
+            printf("TEST:index: %d, x: %f, y: %f\n", i, polygon->pointarray[i]->x, polygon->pointarray[i]->y);
             //printf("TEST:here\n");
             //printf("TEST:matrix: %d\n", polygon->RelationMatrix[i][j]);
             if (*(polygon->RelationMatrix +pointnum*i+j)) DrawDottedLine(polygon->pointarray[i], polygon->pointarray[j]);
@@ -1610,7 +1612,7 @@ void InitText(void)
     int i;
 
     Register(text, TEXT);
-
+    //printf("TEST:here\n");
     text->frame = GetBlock(sizeof(struct TwoDhasEdge));
     text->frame->PointNum = 4;
     for (i = 0; i < text->frame->PointNum; i++) {
@@ -1625,8 +1627,8 @@ void InitText(void)
     (text->frame->pointarray)[3]->x = (text->frame->pointarray)[0]->x;
     (text->frame->pointarray)[3]->y = (text->frame->pointarray)[2]->y;
     text->frame->RelationMatrix = RectangleMatrix;
-    DrawTextFrame(text, RegisterP->RegisterObj[RegisterP->ActiveOne]->color);
-
+    DrawTextFrame(text->frame, RegisterP->RegisterObj[RegisterP->ActiveOne]->color);
+    //printf("TEST:here\n");
     text->CursorIndex = 0;
     text->CursorPosition = GetBlock(sizeof(struct Point));
     text->CursorPosition->x = CurrentPoint->x;
