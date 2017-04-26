@@ -236,8 +236,9 @@ void InitText(void);
 void DrawTextFrame(struct TwoDhasEdge *polygon, char *color);
 void GetTextFrameShape(void);
 void DrawTwoDText(void);
-void DrawPureText(void);
+void DrawPureText(struct TwoDText *text);
 void DisplayCursor(double x, double y);
+double CharWide(char ch);
 
 void Main()
 {
@@ -279,6 +280,18 @@ void KeyboardEventProcess(int key,int event)
                 case VK_DELETE:
                     DeleteObj();
                     break;
+                case VK_LEFT:
+                    if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    break;
+                case VK_RIGHT:
+                    if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    break;
+                case VK_BACK:
+                    if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    break;
+                case DELETE:
+                    if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    break;
             }
             break;
         case KEY_UP:
@@ -288,7 +301,22 @@ void KeyboardEventProcess(int key,int event)
 
 void CharEventProcess(char c)
 {
-
+    switch (c) {
+        //case '\r':
+            //break;
+        case 8: //BACKSPACE
+            break;
+        case 127: //DEL
+            break;
+        default:
+            if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+            struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+            if (text->CursorIndex == MAX_TEXT_LENGTH-1) return;//could be improved
+            text->TextArray[text->CursorIndex] = c;
+            text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
+            text->TextArray[++(text->CursorIndex)] = '\0';
+            break;
+    }
 }
 
 void TimerEventProcess(int timerID)
@@ -1760,14 +1788,19 @@ void DrawTwoDText(void)
         startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
     }
     if (Obj->color == SELECT_COLOR) {
-        DrawPureText();
+        DrawPureText(obj);
     }
     SetEraseMode(EraseMode);
 }
 
-void DrawPureText(void)
+void DrawPureText(struct TwoDText *text)
 {
-    
+    bool EraseMode = GetEraseMode();
+
+    SetEraseMode(FALSE);
+    MovePen(text->CursorPosition->x, text->CursorPosition->y);
+    DrawTextString(text->TextArray);
+    SetEraseMode(TRUE);
 }
 
 void DisplayCursor(double x, double y)
@@ -1783,4 +1816,9 @@ bool CheckText(struct obj *Obj)
     struct TwoDText *text = Obj->objPointer;
 
     return CheckInsidePolygon(text->pointarray, Obj->CenterPoint, text->RelationMatrix, text->PointNum);
+}
+
+double CharWide(char ch)
+{
+    return TextStringWidth(CharToString(ch));
 }
