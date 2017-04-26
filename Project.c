@@ -153,6 +153,7 @@ static bool isSelectObj = FALSE;
 //static bool SelectFlag = FALSE;
 static bool isCursorBlink = FALSE;
 static bool isControlDown = FALSE;
+static bool isSelectSelf = FALSE;
 //static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
@@ -237,7 +238,7 @@ void RotateEllipse(void);
 void Zoom(struct obj *Obj, int zoom);
 void ZoomTwoDhasEdge(struct obj *Obj, int zoom);
 void InitText(void);
-void DrawTextFrame(struct TwoDhasEdge *polygon, char *color);
+//void DrawTextFrame(struct TwoDhasEdge *polygon, char *color);
 void GetTextFrameShape(void);
 void DrawTwoDText(void);
 void DrawPureText(struct TwoDText *text);
@@ -795,7 +796,7 @@ void RefreshAndDraw(void)
     int activeone = RegisterP->ActiveOne;
     //printf("TEST:RefreshAndDraw\n");
     RefreshDisplay();
-
+    //printf("TEST: %d\n", activeone);
     PenColor = GetPenColor();
     //if (activeone = RegisterP->ActiveOne == -1) return;
     for (i = 0; i < objnum; i++) {
@@ -803,6 +804,8 @@ void RefreshAndDraw(void)
         SetPenColor(position->color);
         DrawWhat = position->DrawType;
         RegisterP->ActiveOne = i;
+        if (i == activeone) isSelectSelf = TRUE;
+        else isSelectSelf = FALSE;
         if (position->color == SELECT_COLOR) {
             DrawRotatePoint(position);
         }
@@ -893,7 +896,7 @@ void DrawTwoDhasEdge(void)
 }
 
 
-void DrawTextFrame(struct TwoDhasEdge *polygon, char *color)
+/*void DrawTextFrame(struct TwoDhasEdge *polygon, char *color)
 {
     int i, j;
     char * PreColor;
@@ -913,7 +916,7 @@ void DrawTextFrame(struct TwoDhasEdge *polygon, char *color)
         }
     }
     SetPenColor(PreColor);
-}
+}*/
 
 void DrawLineByPoint(struct Point *point1, struct Point *point2)
 {
@@ -1366,12 +1369,12 @@ void test(void)
     point2->y = 1;
     DrawDottedLine(point1, point2);
 }
-    //if (RegisterP->ActiveOne != -1) printf("TEST: %d", InsideRotatePoint(RegisterP->RegisterObj[RegisterP->ActiveOne]));
+
 bool CheckRotate(void) 
 {
     //int i;
     //int objnum = RegisterP->ObjNum;
-
+    //if (RegisterP->ActiveOne != -1) printf("TEST: %d", InsideRotatePoint(RegisterP->RegisterObj[RegisterP->ActiveOne]));
     if (RegisterP->ActiveOne != -1 && InsideRotatePoint(RegisterP->RegisterObj[RegisterP->ActiveOne])) return TRUE;
     else return FALSE;
     /*for (i = 0; i < objnum; i++) {
@@ -1853,9 +1856,11 @@ void DrawTwoDText(void)
             //printf("TEST:here\n");
             //printf("TEST:matrix: %d\n", obj->RelationMatrix[i][j]);
             if (*(obj->RelationMatrix +pointnum*i+j)) {
-                if (!isSelectObj) {
+                //printf("TEST:%d\n", isSelectSelf);
+                if (!isSelectSelf) {
                     SetEraseMode(TRUE);
                     DrawLineByPoint(obj->pointarray[i], obj->pointarray[j]);
+                    SetEraseMode(FALSE);
                 } else DrawDottedLine(obj->pointarray[i], obj->pointarray[j]);
             }
         }
