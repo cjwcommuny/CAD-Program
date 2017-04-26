@@ -146,6 +146,8 @@ static bool isOperating = FALSE;
 static bool isRotating = FALSE;
 static bool isMovingObj = FALSE;
 static bool isCancelSelect = FALSE;
+static bool isSelectObj = FALSE;
+//static bool SelectFlag = FALSE;
 static bool isCursorBlink = FALSE;
 //static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
@@ -389,14 +391,15 @@ static void LeftMouseUpDraw(void)
 {
     //printf("TEST:LeftMouseUpDraw\n");
     //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
-    if (!isMouseDownMoving && RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
+    /*if (!isMouseDownMoving && RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
         DeleteObj();
-    }
+    }*/
     if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType == TEXT) {
         //printf("TEST:here\n");
         //printf("TEST:3: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
         //startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
         //printf("TEST:here\n");
+        //isSelectObj = TRUE;
     } else {
         RegisterP->ActiveOne = -1;
     }
@@ -415,6 +418,7 @@ static void LeftMouseMoveDraw(void)
         //printf("TEST:here\n");
         GetShape();
         //printf("TEST:here %d\n", TestCount++);
+        if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType == TEXT) isSelectObj = TRUE;
         RefreshAndDraw();
         //ChooseDrawWhat(/*,,*/DrawTwoDhasEdge/*,,*/);
     }
@@ -428,6 +432,7 @@ static void LeftMouseDownOperate(void)
     //printf("objnum:%d\n", objnum);
     //int SelcectArray[MAXOBJ];
     //printf("TEST:LeftMouseDownOperate\n");
+    //SelectFlag = FALSE;
     //SelectFlag = FALSE;
     isOperating = TRUE;
     if (CheckRotate()) {
@@ -451,6 +456,7 @@ static void LeftMouseDownOperate(void)
                     DrawRotatePoint(RegisterP->RegisterObj[i]);
                     SelectNum++;
                     RegisterP->ActiveOne = i;
+                    isSelectObj = TRUE;
                 }
                 isMovingObj = TRUE;
                 /*if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) {
@@ -479,6 +485,7 @@ static void LeftMouseDownOperate(void)
             }
         }
         if (!SelectFlag) {
+            isSelectObj = FALSE;
             for (j = 0; j < objnum; j++) {
                 RegisterP->RegisterObj[j]->color = DEFAULT_COLOR;
             }
@@ -513,6 +520,7 @@ static void LeftMouseUpOperate(void)
     if (!isMouseDownMoving && isCancelSelect) { //cancel selecting this obj
         //printf("TEST:%d\n", RegisterP->ActiveOne);
         if (RegisterP->ActiveOne != -1) RegisterP->RegisterObj[RegisterP->ActiveOne]->color = DEFAULT_COLOR;
+        isSelectObj = FALSE;
         RefreshAndDraw();
         SelectNum--;
         RegisterP->ActiveOne = -1;
@@ -1725,7 +1733,8 @@ void DrawTwoDText(void)
     bool EraseMode;
 
     EraseMode = GetEraseMode();
-    SetEraseMode(isCancelSelect);
+    //SetEraseMode(isCancelSelect);
+    //printf("TEST:%d\n", isCancelSelect);
     SetPenColor((RegisterP->RegisterObj)[RegisterP->ActiveOne]->color);
     Obj->CenterPoint->x = 0;
     Obj->CenterPoint->y = 0;
@@ -1736,13 +1745,18 @@ void DrawTwoDText(void)
         for (j = i; j < pointnum; j++) {
             //printf("TEST:here\n");
             //printf("TEST:matrix: %d\n", obj->RelationMatrix[i][j]);
-            if (*(obj->RelationMatrix +pointnum*i+j)) DrawDottedLine(obj->pointarray[i], obj->pointarray[j]);
+            if (*(obj->RelationMatrix +pointnum*i+j)) {
+                if (!isSelectObj) {
+                    SetEraseMode(TRUE);
+                    DrawLineByPoint(obj->pointarray[i], obj->pointarray[j]);
+                } else DrawDottedLine(obj->pointarray[i], obj->pointarray[j]);
+            }
         }
     }
     Obj->CenterPoint->x /= obj->PointNum;
     Obj->CenterPoint->y /= obj->PointNum;
     if (Obj->color == SELECT_COLOR || isMouseDownMoving) {
-        printf("TEST:here\n");
+        //printf("TEST:here\n");
         startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
     }
     if (Obj->color == SELECT_COLOR) {
