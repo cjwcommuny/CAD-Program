@@ -818,6 +818,7 @@ void RefreshAndDraw(void)
     string PenColor;
     int activeone = RegisterP->ActiveOne;
     //printf("TEST:RefreshAndDraw\n");
+    //ClearWindow();
     RefreshDisplay();
     //printf("TEST: %d\n", activeone);
     PenColor = GetPenColor();
@@ -1211,14 +1212,18 @@ void SetMode(void)
         case 2:
             mode = DRAW; //draw and text are handled together
             DrawWhat = TEXT;
+            printf("Let's type the text!\n'");
             //SetFunction();
             break;
         case 3:
             mode = OPERATE;
             //SetFunction();
+            printf("Let's operate object!\n");
             break;
     }
     //how to close the console?
+    system("pause");
+    FreeConsole();
 }
 
 void SetFunction(void)
@@ -1228,17 +1233,20 @@ void SetFunction(void)
     switch (mode) {
         case DRAW:
             printf("What object do you want to draw?\n");
-            printf("1:Line\n2:Rectangle\n3:Ellipse\n4:Any curve\n");
+            printf("1:Line\n2:Rectangle\n3:Ellipse\n");
             scanf("%d", &input); //wrong input prompt
             switch (input) {
                 case 1:
                     DrawWhat = LINE;
+                    printf("Let's draw the line!\n");
                     break;
                 case 2:
                     DrawWhat = RECTANGLE;
+                    printf("Let's draw the rectangle!\n");
                     break;
                 case 3:
                     DrawWhat = ELLIPSE;
+                    printf("Let's draw the ellipse!\n");
                     break;
                 case 4:
                     DrawWhat = LOCUS;
