@@ -46,7 +46,8 @@ typedef enum {
 
 typedef enum {
     //CURRENT_POINT_TIMER = 1
-    CURSOR_BLINK = 1
+    CURSOR_BLINK = 1//,
+    //CURSOR_DISPLAY = 2
 } timerID;
 
 typedef enum {
@@ -152,6 +153,7 @@ static bool isCancelSelect = FALSE;
 static bool isSelectObj = FALSE;
 //static bool SelectFlag = FALSE;
 static bool isCursorBlink = FALSE;
+//static bool isDisplayCursor = FALSE;
 static bool isControlDown = FALSE;
 static bool isSelectSelf = FALSE;
 //static bool SelectFlag = FALSE;
@@ -361,6 +363,11 @@ void CharEventProcess(char c)
         default: {
             if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+            //isDisplayCursor = TRUE;
+            //cancelTimer(CURSOR_BLINK);
+            //startTimer(CURSOR_DISPLAY, CURSOR_BLINK_TIME);
+            //cancelTimer(CURSOR_BLINK);
+            //DisplayCursor(text->CursorPosition->x, text->CursorPosition->y);
             InsertChar(text->TextArray, c, text->CursorIndex, MAX_TEXT_LENGTH);
             text->CursorPosition->x += CharWide(text->TextArray[(text->CursorIndex)++]);
             //printf("TEST: %s\n", text->TextArray);
@@ -369,6 +376,9 @@ void CharEventProcess(char c)
             //text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
             //text->TextArray[++(text->CursorIndex)] = '\0';
             RefreshAndDraw();
+            //startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
+            //cancelTimer(CURSOR_DISPLAY);
+            //startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
             break;
         } 
     }
@@ -378,7 +388,7 @@ void TimerEventProcess(int timerID)
 {
     //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
     switch (timerID) {
-        case CURSOR_BLINK:
+        case CURSOR_BLINK: {
             if (RegisterP->ActiveOne == -1) return;
             if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
@@ -386,13 +396,26 @@ void TimerEventProcess(int timerID)
             if (!(text->isCursorBlink)) return;
             //printf("TEST:here\n");
             SetEraseMode(!(text->isDisplayCursor));
+            //if (isDisplayCursor) SetEraseMode(FALSE);
             //printf("TEST: %d\n", text->isDisplayCursor);
             //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
             //if (!(text->isDisplayCursor)) RefreshAndDraw();
             DisplayCursor(text->CursorPosition->x, text->CursorPosition->y);
             //SetEraseMode(erasemode);
             text->isDisplayCursor = !(text->isDisplayCursor);
+            //isDisplayCursor = FALSE;
             break;
+        }
+        /*case CURSOR_DISPLAY: {
+            if (RegisterP->ActiveOne == -1) return;
+            if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+            struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+            //printf("TEST:here\n");
+            if (!(text->isCursorBlink)) return;
+            SetEraseMode(FALSE);
+            DisplayCursor(text->CursorPosition->x, text->CursorPosition->y);
+            break;
+        }*/
     }
 }
 
