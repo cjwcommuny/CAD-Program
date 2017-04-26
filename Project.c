@@ -242,6 +242,7 @@ void DrawPureText(struct TwoDText *text);
 void DisplayCursor(double x, double y);
 double CharWide(char ch);
 void MoveText(struct obj *Obj, double dx, double dy);
+void InsertChar(char *array, char element, int index, int length);
 
 void Main()
 {
@@ -341,23 +342,31 @@ void KeyboardEventProcess(int key,int event)
 void CharEventProcess(char c)
 {
     switch (c) {
-        //case '\r':
-            //break;
+        case '\r': {
+            if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+            struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+            
+            break;
+        }
         case 8: //BACKSPACE
             break;
         case 127: //DEL
             break;
         //case 112:
             //break;
-        default:
+        default: {
             if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
-            if (text->CursorIndex == MAX_TEXT_LENGTH-1) return;//could be improved
-            text->TextArray[text->CursorIndex] = c;
-            text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
-            text->TextArray[++(text->CursorIndex)] = '\0';
+            InsertChar(text->TextArray, c, text->CursorIndex, MAX_TEXT_LENGTH);
+            text->CursorPosition->x += CharWide(text->TextArray[(text->CursorIndex)++]);
+            //printf("TEST: %s\n", text->TextArray);
+            //if (text->CursorIndex == MAX_TEXT_LENGTH-1) return;//could be improved
+            //text->TextArray[text->CursorIndex] = c;
+            //text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
+            //text->TextArray[++(text->CursorIndex)] = '\0';
             RefreshAndDraw();
             break;
+        } 
     }
 }
 
@@ -1891,4 +1900,20 @@ void MoveText(struct obj *Obj, double dx, double dy)
     }
     text->CursorPosition->x += dx;
     text->CursorPosition->y += dy;
+}
+
+void InsertChar(char *array, char element, int index, int length)
+{
+    char *ArrayCopy = GetBlock(length * sizeof(char));
+    int i;
+
+    for (i = 0; i < length; i++) {
+        if (array[i] == '\0') break;
+    }
+    if (i + 1 >= length) return;
+    strcpy(ArrayCopy, array + index);
+    array[index] = element;
+    strcpy(array + index + 1, ArrayCopy);
+    //printf("TEST: %s\n", array);
+    free(ArrayCopy);
 }
