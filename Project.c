@@ -278,21 +278,49 @@ void KeyboardEventProcess(int key,int event)
                     break;
                 case VK_F3:
                     break;
-                case VK_DELETE:
+                /*case VK_DELETE:
                     DeleteObj();
-                    break;
-                case VK_LEFT:
+                    break;*/
+                case VK_LEFT: {
                     if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+                    if (text->CursorIndex == 0) return;
+                    text->CursorIndex -= 1;
+                    text->CursorPosition->x -= CharWide(text->TextArray[text->CursorIndex]);
+                    RefreshAndDraw();
                     break;
-                case VK_RIGHT:
+                }
+                case VK_RIGHT: {
                     if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+                    if (text->TextArray[text->CursorIndex] == '\0') return;
+                    text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
+                    text->CursorIndex += 1;
+                    RefreshAndDraw();
                     break;
-                case VK_BACK:
+                }
+                case VK_BACK: {
                     if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+                    if (text->CursorIndex == 0) return;
+                    char *TextCopy = GetBlock(MAX_TEXT_LENGTH * sizeof(char));
+                    strcpy(TextCopy, text->TextArray + text->CursorIndex);
+                    text->CursorPosition->x -= CharWide(text->TextArray[--(text->CursorIndex)]);
+                    strcpy(text->TextArray + text->CursorIndex, TextCopy);
+                    RefreshAndDraw();
                     break;
-                case DELETE:
+                }
+                case VK_DELETE: {
                     if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                    struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+                    if (text->TextArray[text->CursorIndex] == '\0') return;
+                    //text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
+                    char *TextCopy = GetBlock(MAX_TEXT_LENGTH * sizeof(char));
+                    strcpy(TextCopy, text->TextArray + text->CursorIndex + 1);
+                    strcpy(text->TextArray + text->CursorIndex, TextCopy);
+                    RefreshAndDraw();
                     break;
+                }
             }
             break;
         case KEY_UP:
