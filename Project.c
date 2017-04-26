@@ -35,6 +35,7 @@
 #define SIZE_FACTOR 0.1
 #define INIT_TEXT_FRAME_WIDTH 4
 #define INIT_TEXT_FRAME_HEIGHT 3
+#define CURSOR_SIZE 5
 
 typedef enum {
     ZOOM_IN,
@@ -365,6 +366,7 @@ void TimerEventProcess(int timerID)
             SetEraseMode(!(text->isDisplayCursor));
             //printf("TEST: %d\n", text->isDisplayCursor);
             //printf("TEST:2: %d\n", ((struct TwoDText *)(RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer))->isDisplayCursor);
+            //if (!(text->isDisplayCursor)) RefreshAndDraw();
             DisplayCursor(text->CursorPosition->x, text->CursorPosition->y);
             //SetEraseMode(erasemode);
             text->isDisplayCursor = !(text->isDisplayCursor);
@@ -1845,10 +1847,16 @@ void DrawPureText(struct TwoDText *text)
 
 void DisplayCursor(double x, double y)
 {
-    char cursor[] = {'|', '\0'};
+    //char cursor[] = {'|', '\0'};
+    int PenSize = GetPenSize();
 
+    //printf("TEST:pensize %d\n", PenSize);
+    SetPenSize(CURSOR_SIZE);
     MovePen(x, y);
-    DrawTextString(cursor);
+    DrawLine(0, GetFontHeight());
+    MovePen(x, y);
+    SetPenSize(PenSize);
+    //DrawTextString(cursor);
 }
 
 bool CheckText(struct obj *Obj)
