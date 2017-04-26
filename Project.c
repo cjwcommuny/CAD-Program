@@ -150,6 +150,7 @@ static bool isCancelSelect = FALSE;
 static bool isSelectObj = FALSE;
 //static bool SelectFlag = FALSE;
 static bool isCursorBlink = FALSE;
+static bool isControlDown = FALSE;
 //static bool SelectFlag = FALSE;
 static struct Point *CurrentPoint, *PreviousPoint;
 static struct RegisterADT *RegisterP;
@@ -279,6 +280,9 @@ void KeyboardEventProcess(int key,int event)
                     break;
                 case VK_F3:
                     break;
+                case VK_CONTROL:
+                    isControlDown = TRUE;
+                    break;
                 /*case VK_DELETE:
                     DeleteObj();
                     break;*/
@@ -312,19 +316,24 @@ void KeyboardEventProcess(int key,int event)
                     break;
                 }
                 case VK_DELETE: {
-                    if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
-                    struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
-                    if (text->TextArray[text->CursorIndex] == '\0') return;
-                    //text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
-                    char *TextCopy = GetBlock(MAX_TEXT_LENGTH * sizeof(char));
-                    strcpy(TextCopy, text->TextArray + text->CursorIndex + 1);
-                    strcpy(text->TextArray + text->CursorIndex, TextCopy);
-                    RefreshAndDraw();
+                    if (isControlDown) {
+                        DeleteObj();
+                    } else {
+                        if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
+                        struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+                        if (text->TextArray[text->CursorIndex] == '\0') return;
+                        //text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
+                        char *TextCopy = GetBlock(MAX_TEXT_LENGTH * sizeof(char));
+                        strcpy(TextCopy, text->TextArray + text->CursorIndex + 1);
+                        strcpy(text->TextArray + text->CursorIndex, TextCopy);
+                        RefreshAndDraw();
+                    }
                     break;
                 }
             }
             break;
         case KEY_UP:
+            isControlDown = FALSE;
             break;
     }
 }
