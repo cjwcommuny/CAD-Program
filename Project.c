@@ -623,11 +623,14 @@ static void LeftMouseMoveOperate(void)
     double y1 = CurrentPoint->y;
     //printf("TEST:%d, %d, %d\n",isMovingObj, isRotating, isMouseDown);
     //if (isMouseDown) isMouseDownMoving = TRUE;
+    //if (isMouseDown) printf("TEST: moving: %d,rotating: %d\n", isMovingObj, isRotating);
     if (isMovingObj && isMouseDown) {
         for (i = 0; i < RegisterP->ObjNum; i++) {
             if (RegisterP->RegisterObj[i]->color == SELECT_COLOR) MoveObj(RegisterP->RegisterObj[i], x1-x0, y1-y0);
         }
     } else if (isRotating && isMouseDown) {
+        //printf("TEST:here\n");
+        DrawWhat = RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType;
         rotate(x0, y0, x1, y1);
     }
 }
@@ -681,14 +684,18 @@ void ChooseDrawWhat(void (*text)(void),
                     void (*locus)(void))
 {
     //printf("TEST:ChooseDrawWhat\n");
+    //printf("TEST: %s\n", DrawWhat);
     switch (DrawWhat) {
         case NO_TYPE:
+            //printf("TEST:NO_TYPE\n");
             break;
         case TEXT:
+            //printf("TEST:TEXT\n");
             text();
             //text();
             break;
         case LINE:
+            //printf("TEST:LINE\n");
             line();
             break;
         case RECTANGLE:
@@ -696,12 +703,17 @@ void ChooseDrawWhat(void (*text)(void),
             rectangle();
             break;
         case ELLIPSE:
+            //printf("TEST:ELLIPSE\n");
             ellipse();
             //ellipse();
             break;
         case LOCUS:
+            //printf("TEST:locus\n");
             PlaceHolder();
             //locus();
+            break;
+        default:
+            //printf("TEST:default\n");
             break;
     }
 }
@@ -1354,7 +1366,7 @@ void test(void)
     point2->y = 1;
     DrawDottedLine(point1, point2);
 }
-
+    //if (RegisterP->ActiveOne != -1) printf("TEST: %d", InsideRotatePoint(RegisterP->RegisterObj[RegisterP->ActiveOne]));
 bool CheckRotate(void) 
 {
     //int i;
@@ -1396,13 +1408,16 @@ void rotate(double x1, double y1, double x2, double y2) //coule be no arguments
     //r2 = sqrt(pow(x2-xc, 2) + pow(y2-yc, 2));
     //l = sqrt(pow(x2-x1, 2) + pow(y2-y1, 2));
     //cos0 = (r1*r1 + r2*r2 -l*l) / (2*r1*r2);
+    //printf("TEST:%d\n", RegisterP->ActiveOne);
     angle = atan((y2-yc)/(x2-xc)) - atan((y1-yc)/(x1-xc));
+    //printf("TEST:drawwha: %s\n", )
     if (x1 - xc < 0) {
         angle -= PI;
     }
     if (x2 - xc < 0) {
         angle += PI;
     }
+    //printf("TEST:here\n");
     ChooseDrawWhat(PlaceHolder, RotatePolygon, RotatePolygon, RotateEllipse, PlaceHolder);
     RefreshAndDraw();
 }
@@ -1414,6 +1429,8 @@ void RotatePolygon(void) //also works when obj is TwoDhasEdge
     int i;
     double cx = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->x;
     double cy = RegisterP->RegisterObj[RegisterP->ActiveOne]->CenterPoint->y;
+    //printf("TEST:here\n");
+    //printf("TEST:%f\n", angle);
     //double tempX2 = RegisterP->RegisterObj[RegisterP->ActiveOne]->RotatePoint->x;
     //double tempY2 = RegisterP->RegisterObj[RegisterP->ActiveOne]->RotatePoint->y;
     //printf("TEST:rotate:%d\n", RegisterP->ActiveOne);
