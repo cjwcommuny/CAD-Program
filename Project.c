@@ -239,6 +239,7 @@ void DrawTwoDText(void);
 void DrawPureText(struct TwoDText *text);
 void DisplayCursor(double x, double y);
 double CharWide(char ch);
+void MoveText(struct obj *Obj, double dx, double dy);
 
 void Main()
 {
@@ -308,6 +309,8 @@ void CharEventProcess(char c)
             break;
         case 127: //DEL
             break;
+        //case 112:
+            //break;
         default:
             if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
@@ -315,6 +318,7 @@ void CharEventProcess(char c)
             text->TextArray[text->CursorIndex] = c;
             text->CursorPosition->x += CharWide(text->TextArray[text->CursorIndex]);
             text->TextArray[++(text->CursorIndex)] = '\0';
+            RefreshAndDraw();
             break;
     }
 }
@@ -592,6 +596,7 @@ void MoveObj(struct obj *Obj, double dx, double dy)
     //printf("TEST:dx, dy = %f, %f", dx, dy);
     switch (Obj->DrawType) {
         case TEXT:
+            MoveText(Obj, dx, dy);
             break;
         case LINE:
             MoveTwoDhasEdge(Obj, dx, dy);
@@ -1718,13 +1723,16 @@ void InitText(void)
         (text->pointarray)[i] = GetBlock(sizeof(struct Point));
     }
     (text->pointarray)[0]->x = CurrentPoint->x;
-    (text->pointarray)[0]->y = CurrentPoint->y + GetFontHeight();
+    (text->pointarray)[0]->y = CurrentPoint->y;// + GetFontHeight();
     
     text->TextArray = GetBlock( MAX_TEXT_LENGTH * sizeof(char));
+    for (i = 0; i < MAX_TEXT_LENGTH; i++) {
+        text->TextArray[i] = '\0';
+    }
     text->CursorIndex = 0;
     text->CursorPosition = GetBlock(sizeof(struct Point));
     text->CursorPosition->x = CurrentPoint->x;
-    text->CursorPosition->y = CurrentPoint->y;// - GetFontHeight(); ????????
+    text->CursorPosition->y = CurrentPoint->y - GetFontHeight(); //????????
     text->isCursorBlink = TRUE;
     text->isDisplayCursor = FALSE;
 }
@@ -1787,8 +1795,9 @@ void DrawTwoDText(void)
         //printf("TEST:here\n");
         startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
     }
-    if (Obj->color == SELECT_COLOR) {
+    if (1/*Obj->color == SELECT_COLOR*/) {
         DrawPureText(obj);
+        //printf("TEST:%s\n", obj->TextArray);
     }
     SetEraseMode(EraseMode);
 }
@@ -1796,11 +1805,14 @@ void DrawTwoDText(void)
 void DrawPureText(struct TwoDText *text)
 {
     bool EraseMode = GetEraseMode();
+    char *color = GetPenColor();
 
+    SetPenColor(DEFAULT_COLOR);
     SetEraseMode(FALSE);
-    MovePen(text->CursorPosition->x, text->CursorPosition->y);
+    MovePen(text->pointarray[0]->x, text->pointarray[0]->y - GetFontHeight());
     DrawTextString(text->TextArray);
     SetEraseMode(TRUE);
+    SetPenColor(color);
 }
 
 void DisplayCursor(double x, double y)
@@ -1821,4 +1833,17 @@ bool CheckText(struct obj *Obj)
 double CharWide(char ch)
 {
     return TextStringWidth(CharToString(ch));
+}
+
+void MoveText(struct obj *Obj, double dx, double dy)
+{
+    int i;
+    struct TwoDText *text = Obj->objPointer;
+
+    for (i = 0; i < text->PointNum; i++) {
+        text->pointarray[i]->x += dx;
+        text->pointarray[i]->y += dy;
+    }
+    text->CursorPosition->x += dx;
+    text->CursorPosition->y += dy;
 }
