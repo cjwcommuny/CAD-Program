@@ -36,6 +36,8 @@
 #define INIT_TEXT_FRAME_WIDTH 4
 #define INIT_TEXT_FRAME_HEIGHT 3
 #define CURSOR_SIZE 5
+#define ROW_HEIGHT_MODIFY 0.07
+//#define MAX_ROW 30
 
 typedef enum {
     ZOOM_IN,
@@ -274,6 +276,7 @@ void KeyboardEventProcess(int key,int event)
                     if (RegisterP->ActiveOne != -1) {
                         RegisterP->RegisterObj[RegisterP->ActiveOne]->color = DEFAULT_COLOR;
                         RegisterP->ActiveOne = -1;
+                        isSelectObj = FALSE;
                     }
                     SetMode();
                     break;
@@ -345,7 +348,7 @@ void CharEventProcess(char c)
         case '\r': {
             if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct TwoDText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
-            
+            InsertChar(text->TextArray, '\0', text->CursorIndex, MAX_TEXT_LENGTH);
             break;
         }
         case 8: //BACKSPACE
@@ -1772,6 +1775,8 @@ void InitText(void)
     }
     (text->pointarray)[0]->x = CurrentPoint->x;
     (text->pointarray)[0]->y = CurrentPoint->y;// + GetFontHeight();
+    //(text->pointarray)[3]->x = (text->pointarray)[0]->x;
+    //(text->pointarray)[3]->y = 
     
     text->TextArray = GetBlock( MAX_TEXT_LENGTH * sizeof(char));
     for (i = 0; i < MAX_TEXT_LENGTH; i++) {
@@ -1790,8 +1795,9 @@ void GetTextFrameShape(void)
 {
     struct TwoDText *text = (RegisterP->RegisterObj)[RegisterP->ActiveOne]->objPointer;
     //printf("TEST: pointnum: %d\n", text->PointNum);
-    text->pointarray[2]->x = CurrentPoint->x;
-    text->pointarray[2]->y = CurrentPoint->y;
+    if (CurrentPoint->x > text->pointarray[0]->x) text->pointarray[2]->x = CurrentPoint->x;
+    else text->pointarray[2]->x = text->pointarray[0]->x;
+    text->pointarray[2]->y = text->pointarray[0]->y - GetFontHeight() - ROW_HEIGHT_MODIFY;
     text->pointarray[1]->x = text->pointarray[2]->x;
     text->pointarray[1]->y = text->pointarray[0]->y;
     text->pointarray[3]->x = text->pointarray[0]->x;
@@ -1854,7 +1860,10 @@ void DrawPureText(struct TwoDText *text)
 {
     bool EraseMode = GetEraseMode();
     char *color = GetPenColor();
-
+    //int RowIndex = GetBlock(MAX_ROW * sizeof(int));
+    //int i;
+    
+    //for (i = 0; i < MAX_TEXT_LENGTH; i++) {}
     SetPenColor(DEFAULT_COLOR);
     SetEraseMode(FALSE);
     MovePen(text->pointarray[0]->x, text->pointarray[0]->y - GetFontHeight());
