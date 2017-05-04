@@ -731,11 +731,11 @@ void ChooseDrawWhat(void (*text)(void),
             ellipse();
             //ellipse();
             break;
-        case LOCUS:
+        //case LOCUS:
             //printf("TEST:locus\n");
-            PlaceHolder();
+            //PlaceHolder();
             //locus();
-            break;
+            //break;
         default:
             //printf("TEST:default\n");
             break;
@@ -1002,8 +1002,8 @@ bool CheckMouse(struct obj *Obj)
             return CheckConvexPolygon(Obj);
         case ELLIPSE:
             return CheckEllipse(Obj);
-        case LOCUS:
-            break;
+        //case LOCUS:
+            //break;
     }
 }
 
@@ -1249,7 +1249,7 @@ void SetFunction(void)
                     printf("Let's draw the ellipse!\n");
                     break;
                 case 4:
-                    DrawWhat = LOCUS;
+                    //DrawWhat = LOCUS;
                     break;
             }
             break;
@@ -1525,8 +1525,8 @@ void CreateRotatePoint(struct obj *Obj) //can be optimized, similar to ChooseDra
         case ELLIPSE:
             CreateRotatePointForEllipse(Obj);
             break;
-        case LOCUS:
-            break;
+        //case LOCUS:
+            //break;
     }
 }
 
@@ -1746,8 +1746,8 @@ void Zoom(struct obj *Obj, int zoom)
         case ELLIPSE:
             ZoomEllipse(Obj, zoom);
             break;
-        case LOCUS:
-            break;
+        //case LOCUS:
+            //break;
     }
     RefreshAndDraw();
 }
