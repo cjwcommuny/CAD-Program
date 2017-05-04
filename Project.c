@@ -61,7 +61,7 @@ typedef enum {
     LINE,
     RECTANGLE,
     ELLIPSE,
-    //LOCUS,
+    LOCUS,
 } TwoDDrawType;
 
 typedef enum {
@@ -1212,13 +1212,14 @@ void SetMode(void)
         case 2:
             mode = DRAW; //draw and text are handled together
             DrawWhat = TEXT;
-            printf("Let's type the text!\n'");
+            printf("Click the left button of mouse and drag to draw the text box\
+            and then type the text!\n'");
             //SetFunction();
             break;
         case 3:
             mode = OPERATE;
             //SetFunction();
-            printf("Let's operate object!\n");
+            printf("Selcect the object and move, rotate, or delete it!\n");
             break;
     }
     //how to close the console?
