@@ -37,6 +37,7 @@
 #define INIT_TEXT_FRAME_HEIGHT 3
 #define CURSOR_SIZE 5
 #define ROW_HEIGHT_MODIFY 0.07
+#define EXTEND_TEXT_FRAME_CONSTANT 0.02
 
 typedef enum {
     ZOOM_IN,
@@ -317,6 +318,7 @@ void CharEventProcess(char c)
         case '\r': {
             if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct _2DText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+
             InsertChar(text->TextArray, '\0', text->CursorIndex, MAX_TEXT_LENGTH);
             break;
         }
@@ -327,8 +329,14 @@ void CharEventProcess(char c)
         default: {
             if (RegisterP->ActiveOne == -1 || RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) return;
             struct _2DText *text = RegisterP->RegisterObj[RegisterP->ActiveOne]->objPointer;
+            double ChWide = CharWide(c);
+
+            if (text->pointarray[1]->x - text->CursorPosition->x < EXTEND_TEXT_FRAME_CONSTANT + ChWide) {
+                text->pointarray[1]->x = text->pointarray[2]->x += ChWide;
+            }
             InsertChar(text->TextArray, c, text->CursorIndex, MAX_TEXT_LENGTH);
-            text->CursorPosition->x += CharWide(text->TextArray[(text->CursorIndex)++]);
+            text->CursorPosition->x += ChWide;
+            (text->CursorIndex)++;
             RefreshAndDraw();
             break;
         } 
@@ -848,8 +856,7 @@ void SetMode(void)
         case 2:
             mode = DRAW; //draw and text are handled together
             DrawWhat = TEXT;
-            printf("Click the left button of mouse and drag to draw the text box\
-            and then type the text!\n'");
+            printf("Click the left button of mouse and drag to draw the text box and then type the text!\n'");
             break;
         case 3:
             mode = OPERATE;
