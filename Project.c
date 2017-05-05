@@ -422,8 +422,7 @@ static void LeftMouseDownDraw(void)
 
 static void LeftMouseUpDraw(void)
 {
-    if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType == TEXT) {
-    } else {
+    if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
         RegisterP->ActiveOne = -1;
     }
     isDrawing = FALSE;
@@ -1371,9 +1370,7 @@ void Draw_2DText(void)
     if (Obj->color == SELECT_COLOR || isMouseDownMoving) {
         startTimer(CURSOR_BLINK, CURSOR_BLINK_TIME);
     }
-    if (1) {
-        DrawPureText(obj);
-    }
+    DrawPureText(obj);
     SetEraseMode(EraseMode);
 }
 
