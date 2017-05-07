@@ -88,6 +88,7 @@ struct _2DText {
     int PointNum;
     bool *RelationMatrix;
 
+    int FontSize;
     char *TextArray;
     struct Point *CursorPosition;
     int CursorIndex;
@@ -222,6 +223,7 @@ void DisplayCursor(double x, double y);
 double CharWide(char ch);
 void MoveText(struct obj *Obj, double dx, double dy);
 void InsertChar(char *array, char element, int index, int length);
+void ZoomText(struct obj *Obj, int zoom);
 
 void Main()
 {
@@ -430,7 +432,9 @@ static void LeftMouseDownDraw(void)
 
 static void LeftMouseUpDraw(void)
 {
-    if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
+    if (isMouseDownMoving == FALSE) {
+        DeleteObj();
+    } else if (RegisterP->RegisterObj[RegisterP->ActiveOne]->DrawType != TEXT) {
         RegisterP->ActiveOne = -1;
     }
     isDrawing = FALSE;
@@ -599,7 +603,7 @@ void RefreshDisplay(void)
 {
     SetEraseMode(TRUE);
     StartFilledRegion(1);
-    DrawRectangle(0, 0, GetWindowWidth(), GetWindowHeight()); //是否修改成整个屏幕的大小
+    DrawRectangle(0, 0, GetWindowWidth(), GetWindowHeight()); 
     EndFilledRegion();
     MovePen(CurrentPoint->x, CurrentPoint->y);
     SetEraseMode(FALSE);
@@ -1251,6 +1255,7 @@ void Zoom(struct obj *Obj, int zoom)
 {
     switch (Obj->DrawType) {
         case TEXT:
+            ZoomText(Obj, zoom);
             break;
         case LINE:
             Zoom_2DhasEdge(Obj, zoom);
@@ -1321,6 +1326,7 @@ void InitText(void)
     (text->pointarray)[0]->x = CurrentPoint->x;
     (text->pointarray)[0]->y = CurrentPoint->y;
     
+    text->FontSize = GetPointSize();
     text->TextArray = GetBlock( MAX_TEXT_LENGTH * sizeof(char));
     for (i = 0; i < MAX_TEXT_LENGTH; i++) {
         text->TextArray[i] = '\0';
@@ -1385,13 +1391,16 @@ void DrawPureText(struct _2DText *text)
 {
     bool EraseMode = GetEraseMode();
     char *color = GetPenColor();
-    
+    int PointSize = GetPointSize();
+
+    SetPointSize(text->FontSize);
     SetPenColor(DEFAULT_COLOR);
     SetEraseMode(FALSE);
     MovePen(text->pointarray[0]->x, text->pointarray[0]->y - GetFontHeight());
     DrawTextString(text->TextArray);
     SetEraseMode(TRUE);
     SetPenColor(color);
+    SetPointSize(PointSize);
 }
 
 void DisplayCursor(double x, double y)
@@ -1443,6 +1452,30 @@ void InsertChar(char *array, char element, int index, int length)
     array[index] = element;
     strcpy(array + index + 1, ArrayCopy);
     free(ArrayCopy);
+}
+
+void ZoomText(struct obj *Obj, int zoom)
+{
+    //struct _2DText *text = Obj->objPointer;
+    //int PointSize = GetPointSize();
+
+    /*switch (zoom) {
+        case ZOOM_IN:
+            text->pointarray[0]->y = text->pointarray[3]->y +(1 - SIZE_FACTOR) * (text->pointarray[0]->y - text->pointarray[3]->y);
+            text->pointarray[2]->x = text->pointarray[3]->x +(1 - SIZE_FACTOR) * (text->pointarray[2]->x - text->pointarray[3]->x);
+            text->pointarray[1]->y = text->pointarray[0]->y;
+            text->pointarray[1]->x = text->pointarray[2]->x;
+            text->FontSize--;
+            break;
+        case ZOOM_OUT:
+            text->pointarray[0]->y = text->pointarray[3]->y +(1 + SIZE_FACTOR) * (text->pointarray[0]->y - text->pointarray[3]->y);
+            text->pointarray[2]->x = text->pointarray[3]->x +(1 + SIZE_FACTOR) * (text->pointarray[2]->x - text->pointarray[3]->x);
+            text->pointarray[1]->y = text->pointarray[0]->y;
+            text->pointarray[1]->x = text->pointarray[2]->x;
+            text->FontSize++;
+            break;
+    }*/
+    
 }
 
 void PlaceHolder(void)
